@@ -5,8 +5,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#f6f7f9" />
-  <meta name="description" content="Gorillas — Gerenciador de topologia de rede do estabelecimento" />
-  <title>Gorillas • Topologia de Rede</title>
+  <meta name="description" content="Gorillas — Gerenciador de topologia e racks de rede" />
+  <title>Gorillas • Rede</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -36,6 +36,13 @@
         <span class="topbar-title">Gorillas</span>
       </a>
       <div class="topbar-spacer"></div>
+      <button class="topbar-icon-btn" id="btnUndo" type="button" aria-label="Desfazer (Ctrl+Z)"
+        title="Desfazer (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polyline points="1 4 1 10 7 10" />
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+        </svg>
+      </button>
       <div class="topbar-status" id="syncDot" title="Verificando conexão…"></div>
     </header>
 
@@ -60,10 +67,6 @@
             <line x1="15" y1="1" x2="15" y2="4" />
             <line x1="9" y1="20" x2="9" y2="23" />
             <line x1="15" y1="20" x2="15" y2="23" />
-            <line x1="1" y1="9" x2="4" y2="9" />
-            <line x1="1" y1="15" x2="4" y2="15" />
-            <line x1="20" y1="9" x2="23" y2="9" />
-            <line x1="20" y1="15" x2="23" y2="15" />
           </svg>
           Dispositivos
         </a>
@@ -74,6 +77,7 @@
           </svg>
           Conexões
         </a>
+        <div class="nav-group-label">Infraestrutura</div>
         <a class="nav-item" href="#/topologia" data-route="/topologia">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="5" r="3" />
@@ -84,6 +88,28 @@
           </svg>
           Topologia
         </a>
+        <a class="nav-item" href="#/redes" data-route="/redes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+            <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+            <circle cx="12" cy="20" r="1" fill="currentColor" />
+          </svg>
+          Redes
+        </a>
+        <a class="nav-item" href="#/racks" data-route="/racks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="4" y="2" width="16" height="20" rx="2" />
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="10" x2="20" y2="10" />
+            <line x1="4" y1="14" x2="20" y2="14" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+            <circle cx="8" cy="4" r=".5" fill="currentColor" />
+            <circle cx="8" cy="8" r=".5" fill="currentColor" />
+          </svg>
+          Racks
+        </a>
+        <div class="nav-group-label">Sistema</div>
         <a class="nav-item" href="#/configuracoes" data-route="/configuracoes">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="3" />
@@ -96,6 +122,19 @@
       <main class="content" role="main">
         <div class="content-inner" id="view"></div>
       </main>
+      <!-- Inspector Panel (topology/rack) -->
+      <aside class="inspector" id="inspector" aria-label="Detalhes">
+        <div class="inspector-header">
+          <h3 class="inspector-title" id="inspectorTitle">Detalhes</h3>
+          <button class="modal-close" type="button" id="inspectorClose" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="inspector-body" id="inspectorBody"></div>
+      </aside>
     </div>
   </div>
 
@@ -127,7 +166,12 @@
   <div class="toast-container" id="toasts" aria-live="polite" aria-atomic="true"></div>
 
   <script src="app.js"></script>
+  <script src="data.js"></script>
   <script src="pages.js"></script>
+  <script src="topology.js"></script>
+  <script src="rack.js"></script>
+  <script src="networks.js"></script>
+  <script src="render.js"></script>
 </body>
 
 </html>

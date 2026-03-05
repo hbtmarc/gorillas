@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ffffff" />
   <title>Gorillas • Topologia de Rede</title>
   <style>
-    :root{
+    :root {
       --bg: #ffffff;
       --panel: #ffffff;
       --muted: #f5f7fb;
@@ -27,9 +28,16 @@
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     }
 
-    *{ box-sizing: border-box; }
-    html, body{ height: 100%; }
-    body{
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
       margin: 0;
       font-family: var(--font);
       color: var(--text);
@@ -39,27 +47,38 @@
         linear-gradient(#ffffff, #ffffff);
     }
 
-    a{ color: inherit; }
-    button, input, select, textarea{ font: inherit; }
-    ::selection{ background: rgba(255,106,0,.22); }
+    a {
+      color: inherit;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    ::selection {
+      background: rgba(255, 106, 0, .22);
+    }
 
     /* Layout */
-    .app{
+    .app {
       min-height: 100%;
       display: grid;
       grid-template-rows: auto 1fr;
     }
 
-    .topbar{
+    .topbar {
       position: sticky;
       top: 0;
       z-index: 30;
       backdrop-filter: blur(10px);
-      background: rgba(255,255,255,.82);
+      background: rgba(255, 255, 255, .82);
       border-bottom: 1px solid var(--border);
     }
 
-    .topbar-inner{
+    .topbar-inner {
       max-width: var(--maxw);
       margin: 0 auto;
       padding: 14px 16px;
@@ -69,7 +88,7 @@
       justify-content: space-between;
     }
 
-    .brand{
+    .brand {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -77,30 +96,31 @@
       user-select: none;
     }
 
-    .logo{
+    .logo {
       width: 42px;
       height: 42px;
       border-radius: 14px;
       background:
-        radial-gradient(18px 18px at 30% 30%, rgba(255,255,255,.65), transparent 60%),
-        linear-gradient(135deg, rgba(255,106,0,1), rgba(14,165,233,1));
+        radial-gradient(18px 18px at 30% 30%, rgba(255, 255, 255, .65), transparent 60%),
+        linear-gradient(135deg, rgba(255, 106, 0, 1), rgba(14, 165, 233, 1));
       box-shadow: var(--shadow-soft);
-      border: 1px solid rgba(255,255,255,.6);
+      border: 1px solid rgba(255, 255, 255, .6);
     }
 
-    .brand h1{
+    .brand h1 {
       margin: 0;
       font-size: 16px;
       letter-spacing: .2px;
       line-height: 1.1;
     }
-    .brand p{
+
+    .brand p {
       margin: 2px 0 0 0;
       font-size: 12px;
       color: var(--sub);
     }
 
-    .topbar-actions{
+    .topbar-actions {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -108,20 +128,20 @@
       justify-content: flex-end;
     }
 
-    .pill{
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 8px 10px;
       border-radius: 999px;
-      background: rgba(15,23,42,.03);
-      border: 1px solid rgba(226,232,240,.9);
+      background: rgba(15, 23, 42, .03);
+      border: 1px solid rgba(226, 232, 240, .9);
       color: var(--sub);
       font-size: 12px;
       user-select: none;
     }
 
-    .main{
+    .main {
       max-width: var(--maxw);
       margin: 0 auto;
       padding: 16px;
@@ -132,8 +152,8 @@
     }
 
     /* Sidebar */
-    .sidebar{
-      background: rgba(255,255,255,.70);
+    .sidebar {
+      background: rgba(255, 255, 255, .70);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow-soft);
@@ -144,7 +164,7 @@
       overflow: auto;
     }
 
-    .nav-title{
+    .nav-title {
       padding: 10px 10px 6px;
       font-size: 12px;
       color: var(--sub);
@@ -152,12 +172,12 @@
       text-transform: uppercase;
     }
 
-    .nav{
+    .nav {
       display: grid;
       gap: 6px;
     }
 
-    .nav a{
+    .nav a {
       text-decoration: none;
       display: flex;
       gap: 10px;
@@ -167,44 +187,48 @@
       border: 1px solid transparent;
       color: var(--text);
     }
-    .nav a:hover{
-      background: rgba(15,23,42,.03);
-      border-color: rgba(226,232,240,.9);
+
+    .nav a:hover {
+      background: rgba(15, 23, 42, .03);
+      border-color: rgba(226, 232, 240, .9);
     }
-    .nav a.active{
-      background: rgba(255,106,0,.10);
-      border-color: rgba(255,106,0,.25);
+
+    .nav a.active {
+      background: rgba(255, 106, 0, .10);
+      border-color: rgba(255, 106, 0, .25);
     }
-    .nav .icon{
+
+    .nav .icon {
       width: 30px;
       height: 30px;
       border-radius: 10px;
       display: grid;
       place-items: center;
-      background: rgba(15,23,42,.04);
-      border: 1px solid rgba(226,232,240,.9);
+      background: rgba(15, 23, 42, .04);
+      border: 1px solid rgba(226, 232, 240, .9);
       font-size: 16px;
     }
-    .nav a.active .icon{
-      background: rgba(255,106,0,.12);
-      border-color: rgba(255,106,0,.25);
+
+    .nav a.active .icon {
+      background: rgba(255, 106, 0, .12);
+      border-color: rgba(255, 106, 0, .25);
     }
 
-    .content{
+    .content {
       display: grid;
       gap: 16px;
       align-content: start;
     }
 
-    .panel{
-      background: rgba(255,255,255,.80);
+    .panel {
+      background: rgba(255, 255, 255, .80);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow-soft);
       padding: 16px;
     }
 
-    .panel-header{
+    .panel-header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -213,17 +237,18 @@
       margin-bottom: 12px;
     }
 
-    .panel-header h2{
+    .panel-header h2 {
       margin: 0;
       font-size: 16px;
     }
-    .panel-header p{
+
+    .panel-header p {
       margin: 6px 0 0 0;
       color: var(--sub);
       font-size: 13px;
     }
 
-    .row{
+    .row {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
@@ -232,92 +257,118 @@
     }
 
     /* Controls */
-    .btn{
-      border: 1px solid rgba(226,232,240,.95);
+    .btn {
+      border: 1px solid rgba(226, 232, 240, .95);
       background: white;
       color: var(--text);
       padding: 10px 12px;
       border-radius: 12px;
       cursor: pointer;
-      box-shadow: 0 1px 0 rgba(15,23,42,.04);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .04);
       display: inline-flex;
       gap: 8px;
       align-items: center;
       transition: transform .04s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
       user-select: none;
     }
-    .btn:hover{
-      border-color: rgba(148,163,184,.7);
+
+    .btn:hover {
+      border-color: rgba(148, 163, 184, .7);
       box-shadow: var(--shadow-soft);
     }
-    .btn:active{ transform: translateY(1px); }
-    .btn.primary{
-      background: linear-gradient(135deg, rgba(255,106,0,1), rgba(255,136,58,1));
-      border-color: rgba(255,106,0,.35);
-      color: white;
-    }
-    .btn.primary:hover{
-      box-shadow: 0 12px 26px rgba(255,106,0,.20);
-    }
-    .btn.danger{
-      border-color: rgba(239,68,68,.25);
-      background: rgba(239,68,68,.06);
-      color: rgba(153,27,27,1);
+
+    .btn:active {
+      transform: translateY(1px);
     }
 
-    .field{
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(255, 106, 0, 1), rgba(255, 136, 58, 1));
+      border-color: rgba(255, 106, 0, .35);
+      color: white;
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 12px 26px rgba(255, 106, 0, .20);
+    }
+
+    .btn.danger {
+      border-color: rgba(239, 68, 68, .25);
+      background: rgba(239, 68, 68, .06);
+      color: rgba(153, 27, 27, 1);
+    }
+
+    .field {
       display: grid;
       gap: 6px;
       min-width: 220px;
     }
-    .field label{
+
+    .field label {
       font-size: 12px;
       color: var(--sub);
     }
-    .input, select, textarea{
+
+    .input,
+    select,
+    textarea {
       width: 100%;
       padding: 10px 12px;
       border-radius: 12px;
-      border: 1px solid rgba(226,232,240,.95);
+      border: 1px solid rgba(226, 232, 240, .95);
       background: white;
       outline: none;
       transition: box-shadow .15s ease, border-color .15s ease;
     }
-    .input:focus, select:focus, textarea:focus{
-      border-color: rgba(14,165,233,.55);
+
+    .input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(14, 165, 233, .55);
       box-shadow: var(--focus);
     }
-    textarea{ min-height: 88px; resize: vertical; }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
 
     /* Table */
-    .table-wrap{
+    .table-wrap {
       overflow: auto;
-      border: 1px solid rgba(226,232,240,.95);
+      border: 1px solid rgba(226, 232, 240, .95);
       border-radius: 14px;
       background: white;
     }
-    table{
+
+    table {
       width: 100%;
       border-collapse: collapse;
       min-width: 720px;
     }
-    th, td{
+
+    th,
+    td {
       text-align: left;
       padding: 12px 12px;
-      border-bottom: 1px solid rgba(226,232,240,.85);
+      border-bottom: 1px solid rgba(226, 232, 240, .85);
       font-size: 13px;
       vertical-align: top;
     }
-    th{
+
+    th {
       font-size: 12px;
       color: var(--sub);
-      background: rgba(15,23,42,.02);
+      background: rgba(15, 23, 42, .02);
       position: sticky;
       top: 0;
       z-index: 1;
     }
-    tr:hover td{ background: rgba(15,23,42,.015); }
-    .td-actions{
+
+    tr:hover td {
+      background: rgba(15, 23, 42, .015);
+    }
+
+    .td-actions {
       white-space: nowrap;
       display: flex;
       gap: 8px;
@@ -325,50 +376,58 @@
     }
 
     /* Badges */
-    .badge{
+    .badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 6px 10px;
       border-radius: 999px;
       font-size: 12px;
-      border: 1px solid rgba(226,232,240,.95);
-      background: rgba(15,23,42,.02);
+      border: 1px solid rgba(226, 232, 240, .95);
+      background: rgba(15, 23, 42, .02);
       color: var(--sub);
       white-space: nowrap;
     }
-    .badge.accent{
-      border-color: rgba(255,106,0,.25);
-      background: rgba(255,106,0,.10);
-      color: rgba(124,45,18,1);
+
+    .badge.accent {
+      border-color: rgba(255, 106, 0, .25);
+      background: rgba(255, 106, 0, .10);
+      color: rgba(124, 45, 18, 1);
     }
-    .badge.info{
-      border-color: rgba(14,165,233,.25);
-      background: rgba(14,165,233,.10);
-      color: rgba(12,74,110,1);
+
+    .badge.info {
+      border-color: rgba(14, 165, 233, .25);
+      background: rgba(14, 165, 233, .10);
+      color: rgba(12, 74, 110, 1);
     }
 
     /* Topology */
-    .topology{
+    .topology {
       width: 100%;
       height: 520px;
       border-radius: var(--radius);
-      border: 1px solid rgba(226,232,240,.95);
+      border: 1px solid rgba(226, 232, 240, .95);
       background:
         linear-gradient(transparent, transparent),
-        radial-gradient(700px 420px at 10% 10%, rgba(255,106,0,.10), transparent 60%),
-        radial-gradient(620px 420px at 90% 10%, rgba(14,165,233,.10), transparent 60%),
+        radial-gradient(700px 420px at 10% 10%, rgba(255, 106, 0, .10), transparent 60%),
+        radial-gradient(620px 420px at 90% 10%, rgba(14, 165, 233, .10), transparent 60%),
         #ffffff;
       overflow: hidden;
       position: relative;
     }
-    .topology svg{ width: 100%; height: 100%; display: block; }
-    .topology .hint{
+
+    .topology svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .topology .hint {
       position: absolute;
       left: 12px;
       bottom: 12px;
-      background: rgba(255,255,255,.86);
-      border: 1px solid rgba(226,232,240,.95);
+      background: rgba(255, 255, 255, .86);
+      border: 1px solid rgba(226, 232, 240, .95);
       border-radius: 999px;
       padding: 8px 10px;
       font-size: 12px;
@@ -377,49 +436,58 @@
     }
 
     /* Modal */
-    .backdrop{
+    .backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15,23,42,.45);
+      background: rgba(15, 23, 42, .45);
       display: none;
       z-index: 50;
       padding: 16px;
     }
-    .backdrop.open{ display: grid; place-items: center; }
 
-    .modal{
+    .backdrop.open {
+      display: grid;
+      place-items: center;
+    }
+
+    .modal {
       width: min(720px, 100%);
       background: white;
       border-radius: 18px;
-      border: 1px solid rgba(226,232,240,.95);
+      border: 1px solid rgba(226, 232, 240, .95);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
-    .modal-head{
+
+    .modal-head {
       padding: 14px 16px;
-      border-bottom: 1px solid rgba(226,232,240,.85);
+      border-bottom: 1px solid rgba(226, 232, 240, .85);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
     }
-    .modal-head h3{
+
+    .modal-head h3 {
       margin: 0;
       font-size: 14px;
     }
-    .modal-body{
+
+    .modal-body {
       padding: 16px;
       display: grid;
       gap: 12px;
     }
-    .grid-2{
+
+    .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
     }
-    .modal-foot{
+
+    .modal-foot {
       padding: 14px 16px;
-      border-top: 1px solid rgba(226,232,240,.85);
+      border-top: 1px solid rgba(226, 232, 240, .85);
       display: flex;
       justify-content: flex-end;
       gap: 10px;
@@ -427,7 +495,7 @@
     }
 
     /* Toast */
-    .toast{
+    .toast {
       position: fixed;
       right: 16px;
       bottom: 16px;
@@ -436,10 +504,11 @@
       gap: 10px;
       pointer-events: none;
     }
-    .toast-item{
+
+    .toast-item {
       pointer-events: auto;
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(226,232,240,.95);
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid rgba(226, 232, 240, .95);
       border-radius: 14px;
       padding: 10px 12px;
       box-shadow: var(--shadow-soft);
@@ -449,44 +518,85 @@
       min-width: 280px;
       max-width: 360px;
     }
-    .toast-dot{
+
+    .toast-dot {
       width: 10px;
       height: 10px;
       border-radius: 999px;
       margin-top: 4px;
       background: var(--accent-2);
     }
-    .toast-item.ok .toast-dot{ background: var(--ok); }
-    .toast-item.bad .toast-dot{ background: var(--bad); }
-    .toast-title{ margin: 0; font-size: 12px; font-weight: 700; }
-    .toast-msg{ margin: 2px 0 0 0; font-size: 12px; color: var(--sub); }
+
+    .toast-item.ok .toast-dot {
+      background: var(--ok);
+    }
+
+    .toast-item.bad .toast-dot {
+      background: var(--bad);
+    }
+
+    .toast-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .toast-msg {
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      color: var(--sub);
+    }
 
     /* Responsive */
-    @media (max-width: 980px){
-      .main{ grid-template-columns: 1fr; }
-      .sidebar{ position: relative; top: auto; height: auto; }
-      table{ min-width: 640px; }
+    @media (max-width: 980px) {
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        top: auto;
+        height: auto;
+      }
+
+      table {
+        min-width: 640px;
+      }
     }
-    @media (max-width: 560px){
-      .grid-2{ grid-template-columns: 1fr; }
-      table{ min-width: 560px; }
-      .brand p{ display: none; }
+
+    @media (max-width: 560px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        min-width: 560px;
+      }
+
+      .brand p {
+        display: none;
+      }
     }
 
     /* A11y helpers */
-    .sr-only{
+    .sr-only {
       position: absolute;
       width: 1px;
       height: 1px;
       padding: 0;
       margin: -1px;
       overflow: hidden;
-      clip: rect(0,0,0,0);
+      clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
     }
   </style>
+
+  <!-- Firebase SDK (compat - zero build tools) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
+
 <body>
   <div class="app" id="app">
     <header class="topbar">
@@ -589,41 +699,60 @@
 
   <script>
     /******************************************************************
-     * Gorillas • Topologia de Rede (MVP - 1 arquivo)
+     * Gorillas • Topologia de Rede
      * - SPA com hash routing (GitHub Pages friendly)
      * - CRUD básico (Dispositivos + Conexões)
      * - Desenho simples de topologia em SVG
-     * - Persistência local via localStorage
+     * - Persistência via Firebase Realtime Database + cache localStorage
      ******************************************************************/
+
+    // =========================
+    // Firebase Init
+    // =========================
+    const firebaseConfig = {
+      apiKey: "AIzaSyAuZ_RWLLn26CqUy3zpyz75_IuQSVQti2k",
+      authDomain: "projectshub-marc35.firebaseapp.com",
+      databaseURL: "https://projectshub-marc35-default-rtdb.firebaseio.com",
+      projectId: "projectshub-marc35",
+      storageBucket: "projectshub-marc35.firebasestorage.app",
+      messagingSenderId: "949883815683",
+      appId: "1:949883815683:web:7367cf58a2d23acbb34b36",
+      measurementId: "G-EPKZTRGGGC"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const rtdb = firebase.database();
+    const dbRef = rtdb.ref("gorillas_net");
+
+    let firebaseConnected = false;
 
     // =========================
     // Utils
     // =========================
-    const $ = (sel, el=document) => el.querySelector(sel);
-    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+    const $ = (sel, el = document) => el.querySelector(sel);
+    const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
 
-    function nowISO(){ return new Date().toISOString(); }
+    function nowISO() { return new Date().toISOString(); }
 
-    function uid(){
+    function uid() {
       if (crypto && crypto.randomUUID) return crypto.randomUUID();
       return "id-" + Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
     }
 
-    function safeJSONParse(text, fallback){
+    function safeJSONParse(text, fallback) {
       try { return JSON.parse(text); } catch { return fallback; }
     }
 
-    function fmtDate(iso){
+    function fmtDate(iso) {
       if (!iso) return "-";
       const d = new Date(iso);
       if (Number.isNaN(d.getTime())) return "-";
       return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
     }
 
-    function clamp(n, a, b){ return Math.min(b, Math.max(a, n)); }
+    function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
 
     // =========================
-    // DB (localStorage)
+    // DB (Firebase RTDB + localStorage cache)
     // =========================
     const DB_KEY = "gorillas_netdb_v1";
 
@@ -635,31 +764,92 @@
         { id: uid(), nome: "AP Salão", tipo: "Access Point", ip: "192.168.0.10", mac: "AA:BB:CC:DD:EE:10", local: "Salão", notas: "Wi-Fi clientes", createdAt: nowISO(), updatedAt: nowISO() },
       ],
       conexoes: [
-        // { id, deId, paraId, tipo, portaDe, portaPara, velocidade, notas, createdAt, updatedAt }
       ]
     };
 
-    function loadDB(){
+    /** Lê cache local (fallback instantâneo) */
+    function loadDBFromCache() {
       const raw = localStorage.getItem(DB_KEY);
       if (!raw) return structuredClone(DEFAULT_DB);
       const parsed = safeJSONParse(raw, null);
       if (!parsed || typeof parsed !== "object") return structuredClone(DEFAULT_DB);
-      // migração simples
       parsed.meta = parsed.meta || { app: "GorillasNet", version: 1, createdAt: nowISO(), updatedAt: nowISO() };
       parsed.dispositivos = Array.isArray(parsed.dispositivos) ? parsed.dispositivos : [];
       parsed.conexoes = Array.isArray(parsed.conexoes) ? parsed.conexoes : [];
       return parsed;
     }
 
-    function saveDB(db){
-      db.meta.updatedAt = nowISO();
+    /** Salva no cache local */
+    function saveDBToCache(db) {
       localStorage.setItem(DB_KEY, JSON.stringify(db));
+    }
+
+    /** Salva no Firebase RTDB (+ cache local) */
+    function saveDB(db) {
+      db.meta.updatedAt = nowISO();
+      saveDBToCache(db);
+      dbRef.set(db).catch(err => {
+        console.error("Firebase saveDB error:", err);
+        toast("bad", "Firebase", "Erro ao salvar no servidor. Dados salvos localmente.");
+      });
+    }
+
+    // =========================
+    // Firebase real-time listener + connection status
+    // =========================
+    function initFirebaseSync() {
+      // Connection status
+      rtdb.ref(".info/connected").on("value", (snap) => {
+        firebaseConnected = !!snap.val();
+        updateStatusPill();
+      });
+
+      // Real-time data listener
+      dbRef.on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data && typeof data === "object") {
+          // Garantir que arrays existem (RTDB converte arrays vazios em null)
+          data.dispositivos = Array.isArray(data.dispositivos) ? data.dispositivos : [];
+          data.conexoes = Array.isArray(data.conexoes) ? data.conexoes : [];
+          data.meta = data.meta || { app: "GorillasNet", version: 1, createdAt: nowISO(), updatedAt: nowISO() };
+
+          appState.db = data;
+          saveDBToCache(data);
+          render();
+        } else {
+          // RTDB vazio (primeiro uso) - faz push dos dados iniciais
+          console.log("Firebase RTDB vazio. Enviando dados iniciais...");
+          const initial = loadDBFromCache();
+          dbRef.set(initial).then(() => {
+            toast("ok", "Firebase", "Dados iniciais enviados para o servidor.");
+          }).catch(err => {
+            console.error("Firebase init push error:", err);
+          });
+        }
+      }, (err) => {
+        console.error("Firebase listener error:", err);
+        toast("bad", "Firebase", "Erro na conexão: " + err.message);
+      });
+    }
+
+    function updateStatusPill() {
+      const pill = $("#pillStatus");
+      if (!pill) return;
+      if (firebaseConnected) {
+        pill.textContent = "🟢 Online (Firebase)";
+        pill.style.borderColor = "rgba(22,163,74,.35)";
+        pill.style.background = "rgba(22,163,74,.08)";
+      } else {
+        pill.textContent = "🟠 Offline (cache)";
+        pill.style.borderColor = "rgba(245,158,11,.35)";
+        pill.style.background = "rgba(245,158,11,.08)";
+      }
     }
 
     // =========================
     // Toast
     // =========================
-    function toast(kind, title, msg){
+    function toast(kind, title, msg) {
       const host = $("#toast");
       const item = document.createElement("div");
       item.className = "toast-item " + (kind || "");
@@ -674,13 +864,13 @@
       setTimeout(() => item.remove(), 3200);
     }
 
-    function escapeHTML(str){
+    function escapeHTML(str) {
       return String(str ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
     }
 
     // =========================
@@ -693,7 +883,7 @@
       focusables: [],
     };
 
-    function openModal({ title, bodyHTML, onSave, saveLabel="Salvar" }){
+    function openModal({ title, bodyHTML, onSave, saveLabel = "Salvar" }) {
       modal.open = true;
       modal.onSave = onSave || null;
       modal.lastFocus = document.activeElement;
@@ -704,7 +894,7 @@
 
       const bd = $("#backdrop");
       bd.classList.add("open");
-      bd.setAttribute("aria-hidden","false");
+      bd.setAttribute("aria-hidden", "false");
 
       // focusables
       modal.focusables = $$("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])", bd)
@@ -716,31 +906,31 @@
       document.addEventListener("keydown", onModalKeydown, true);
     }
 
-    function closeModal(){
+    function closeModal() {
       modal.open = false;
       modal.onSave = null;
 
       const bd = $("#backdrop");
       bd.classList.remove("open");
-      bd.setAttribute("aria-hidden","true");
+      bd.setAttribute("aria-hidden", "true");
 
       document.removeEventListener("keydown", onModalKeydown, true);
 
-      if (modal.lastFocus && typeof modal.lastFocus.focus === "function"){
+      if (modal.lastFocus && typeof modal.lastFocus.focus === "function") {
         modal.lastFocus.focus();
       }
     }
 
-    function onModalKeydown(e){
+    function onModalKeydown(e) {
       if (!modal.open) return;
 
-      if (e.key === "Escape"){
+      if (e.key === "Escape") {
         e.preventDefault();
         closeModal();
         return;
       }
 
-      if (e.key === "Tab"){
+      if (e.key === "Tab") {
         // foco preso no modal (ciclo)
         const f = modal.focusables;
         if (!f.length) return;
@@ -749,10 +939,10 @@
         const last = f[f.length - 1];
         const active = document.activeElement;
 
-        if (e.shiftKey && active === first){
+        if (e.shiftKey && active === first) {
           e.preventDefault(); last.focus(); return;
         }
-        if (!e.shiftKey && active === last){
+        if (!e.shiftKey && active === last) {
           e.preventDefault(); first.focus(); return;
         }
       }
@@ -771,7 +961,7 @@
     // App State
     // =========================
     const appState = {
-      db: loadDB(),
+      db: null,
       route: "/dashboard",
       searchDevices: "",
       searchLinks: "",
@@ -780,19 +970,19 @@
     // =========================
     // Routing
     // =========================
-    function getRouteFromHash(){
+    function getRouteFromHash() {
       const h = location.hash || "#/dashboard";
       const route = h.startsWith("#") ? h.slice(1) : h;
       return route || "/dashboard";
     }
 
-    function setActiveNav(route){
+    function setActiveNav(route) {
       $$("#nav a").forEach(a => {
         a.classList.toggle("active", a.dataset.route === route);
       });
     }
 
-    function navigate(route){
+    function navigate(route) {
       location.hash = "#" + route;
     }
 
@@ -803,15 +993,15 @@
     // =========================
     // Pages
     // =========================
-    function pageDashboard(){
+    function pageDashboard() {
       const totalDev = appState.db.dispositivos.length;
       const totalLinks = appState.db.conexoes.length;
 
       const tipos = countBy(appState.db.dispositivos, d => d.tipo || "Outro");
       const tiposBadges = Object.entries(tipos)
-        .sort((a,b) => b[1]-a[1])
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 8)
-        .map(([k,v]) => `<span class="badge info">${escapeHTML(k)}: <b>${v}</b></span>`)
+        .map(([k, v]) => `<span class="badge info">${escapeHTML(k)}: <b>${v}</b></span>`)
         .join(" ");
 
       return `
@@ -869,12 +1059,12 @@
       `;
     }
 
-    function renderRecentDevices(limit){
+    function renderRecentDevices(limit) {
       const items = [...appState.db.dispositivos]
-        .sort((a,b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+        .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
         .slice(0, limit);
 
-      if (!items.length){
+      if (!items.length) {
         return `<div style="color:var(--sub); font-size:13px;">Nenhum dispositivo cadastrado ainda.</div>`;
       }
 
@@ -906,7 +1096,7 @@
       `;
     }
 
-    function pageDispositivos(){
+    function pageDispositivos() {
       const q = (appState.searchDevices || "").trim().toLowerCase();
       const list = appState.db.dispositivos.filter(d => {
         if (!q) return true;
@@ -941,8 +1131,8 @@
       `;
     }
 
-    function renderDevicesTable(list){
-      if (!list.length){
+    function renderDevicesTable(list) {
+      if (!list.length) {
         return `
           <div style="padding:14px; border:1px dashed rgba(148,163,184,.55); border-radius:14px; color:var(--sub);">
             Nada encontrado. Dica: clique em <b>Novo dispositivo</b> para cadastrar.
@@ -987,7 +1177,7 @@
       `;
     }
 
-    function pageConexoes(){
+    function pageConexoes() {
       const q = (appState.searchLinks || "").trim().toLowerCase();
       const devById = new Map(appState.db.dispositivos.map(d => [d.id, d]));
       const list = appState.db.conexoes.filter(l => {
@@ -1025,10 +1215,10 @@
       `;
     }
 
-    function renderLinksTable(list){
+    function renderLinksTable(list) {
       const devById = new Map(appState.db.dispositivos.map(d => [d.id, d]));
 
-      if (!appState.db.dispositivos.length){
+      if (!appState.db.dispositivos.length) {
         return `
           <div style="padding:14px; border:1px dashed rgba(148,163,184,.55); border-radius:14px; color:var(--sub);">
             Você ainda não cadastrou dispositivos. Vá em <b>Dispositivos</b> e crie pelo menos 2 itens para registrar conexões.
@@ -1036,7 +1226,7 @@
         `;
       }
 
-      if (!list.length){
+      if (!list.length) {
         return `
           <div style="padding:14px; border:1px dashed rgba(148,163,184,.55); border-radius:14px; color:var(--sub);">
             Nenhuma conexão encontrada. Dica: clique em <b>Nova conexão</b> para registrar o primeiro link.
@@ -1060,10 +1250,10 @@
             </thead>
             <tbody>
               ${list.map(l => {
-                const de = devById.get(l.deId)?.nome || "(removido)";
-                const para = devById.get(l.paraId)?.nome || "(removido)";
-                const portas = `${l.portaDe || "-"} → ${l.portaPara || "-"}`;
-                return `
+        const de = devById.get(l.deId)?.nome || "(removido)";
+        const para = devById.get(l.paraId)?.nome || "(removido)";
+        const portas = `${l.portaDe || "-"} → ${l.portaPara || "-"}`;
+        return `
                   <tr>
                     <td><b>${escapeHTML(de)}</b></td>
                     <td><b>${escapeHTML(para)}</b></td>
@@ -1079,14 +1269,14 @@
                     </td>
                   </tr>
                 `;
-              }).join("")}
+      }).join("")}
             </tbody>
           </table>
         </div>
       `;
     }
 
-    function pageTopologia(){
+    function pageTopologia() {
       const svg = renderTopologySVG(appState.db.dispositivos, appState.db.conexoes);
       return `
         <div class="panel">
@@ -1108,15 +1298,19 @@
       `;
     }
 
-    function pageConfiguracoes(){
+    function pageConfiguracoes() {
       const db = appState.db;
+      const connStatus = firebaseConnected
+        ? `<span class="badge" style="border-color:rgba(22,163,74,.35); background:rgba(22,163,74,.08); color:rgba(22,101,52,1);">🟢 Online (Firebase RTDB)</span>`
+        : `<span class="badge" style="border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.08); color:rgba(146,64,14,1);">🟠 Offline (cache local)</span>`;
       return `
         <div class="panel">
           <div class="panel-header">
             <div>
               <h2>Configurações</h2>
-              <p>Base local (por enquanto). Depois conectaremos no Firebase via CDN.</p>
+              <p>Dados sincronizados em tempo real via Firebase Realtime Database.</p>
             </div>
+            ${connStatus}
           </div>
 
           <div class="row" style="align-items:stretch;">
@@ -1127,6 +1321,8 @@
                 Versão: <b>${escapeHTML(db.meta.version)}</b><br/>
                 Criado: <b>${escapeHTML(fmtDate(db.meta.createdAt))}</b><br/>
                 Atualizado: <b>${escapeHTML(fmtDate(db.meta.updatedAt))}</b><br/>
+                Projeto Firebase: <b>projectshub-marc35</b><br/>
+                Caminho RTDB: <b>gorillas_net/</b>
               </div>
             </div>
 
@@ -1146,12 +1342,11 @@
           <div style="height:12px;"></div>
 
           <div class="panel" style="margin:0;">
-            <div style="font-weight:800; margin-bottom:6px;">O que vem no próximo passo</div>
+            <div style="font-weight:800; margin-bottom:6px;">Próximos passos</div>
             <div style="color:var(--sub); font-size:13px; line-height:1.5;">
-              1) Separar em arquivos (CSS/JS) se você quiser.<br/>
-              2) Conectar no Firebase (Auth + Firestore) via CDN.<br/>
-              3) Kanban/Checklist não entra aqui: o foco é rede (dispositivos, conexões e topologia).<br/>
-              4) Evoluir o desenho para “arrastar e soltar” (drag), zoom/pan e etiquetas.
+              1) Separar em arquivos (CSS/JS) se desejado.<br/>
+              2) Adicionar Firebase Auth (login/proteção).<br/>
+              3) Evoluir o desenho para drag & drop, zoom/pan e etiquetas.
             </div>
           </div>
         </div>
@@ -1161,8 +1356,8 @@
     // =========================
     // Topology SVG
     // =========================
-    function renderTopologySVG(dispositivos, conexoes){
-      if (!dispositivos.length){
+    function renderTopologySVG(dispositivos, conexoes) {
+      if (!dispositivos.length) {
         return `
           <svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Topologia vazia">
             <rect x="0" y="0" width="1000" height="520" fill="transparent"/>
@@ -1178,24 +1373,24 @@
 
       // Layout simples: agrupar por tipo e distribuir em linhas
       const groups = groupBy(dispositivos, d => d.tipo || "Outro");
-      const tipos = Object.keys(groups).sort((a,b) => groups[b].length - groups[a].length);
+      const tipos = Object.keys(groups).sort((a, b) => groups[b].length - groups[a].length);
 
       const W = 1000, H = 520;
       const pad = 34;
-      const rowH = (H - pad*2) / Math.max(1, tipos.length);
+      const rowH = (H - pad * 2) / Math.max(1, tipos.length);
       const nodeW = 170, nodeH = 56;
 
       const pos = new Map(); // id -> {x,y,cx,cy}
       tipos.forEach((tipo, row) => {
         const items = groups[tipo];
         const cols = Math.max(1, items.length);
-        const gap = clamp((W - pad*2 - cols*nodeW) / Math.max(1, cols-1), 14, 90);
-        const startX = pad + Math.max(0, (W - pad*2 - (cols*nodeW + (cols-1)*gap))/2);
-        const y = pad + row*rowH + (rowH - nodeH)/2;
+        const gap = clamp((W - pad * 2 - cols * nodeW) / Math.max(1, cols - 1), 14, 90);
+        const startX = pad + Math.max(0, (W - pad * 2 - (cols * nodeW + (cols - 1) * gap)) / 2);
+        const y = pad + row * rowH + (rowH - nodeH) / 2;
 
         items.forEach((d, i) => {
-          const x = startX + i*(nodeW + gap);
-          pos.set(d.id, { x, y, cx: x + nodeW/2, cy: y + nodeH/2 });
+          const x = startX + i * (nodeW + gap);
+          pos.set(d.id, { x, y, cx: x + nodeW / 2, cy: y + nodeH / 2 });
         });
       });
 
@@ -1237,11 +1432,11 @@
       // Legend
       const legend = `
         <g>
-          <rect x="14" y="${H-54}" width="280" height="38" rx="14" fill="rgba(255,255,255,.86)" stroke="rgba(226,232,240,.95)"/>
-          <line x1="28" y1="${H-35}" x2="60" y2="${H-35}" stroke="rgba(255,106,0,.70)" stroke-width="3"/>
-          <text x="68" y="${H-31}" font-size="12" fill="#475569" font-family="${getComputedStyle(document.body).fontFamily}">Cabo</text>
-          <line x1="122" y1="${H-35}" x2="154" y2="${H-35}" stroke="rgba(14,165,233,.75)" stroke-width="3" stroke-dasharray="6 6"/>
-          <text x="162" y="${H-31}" font-size="12" fill="#475569" font-family="${getComputedStyle(document.body).fontFamily}">Wi-Fi</text>
+          <rect x="14" y="${H - 54}" width="280" height="38" rx="14" fill="rgba(255,255,255,.86)" stroke="rgba(226,232,240,.95)"/>
+          <line x1="28" y1="${H - 35}" x2="60" y2="${H - 35}" stroke="rgba(255,106,0,.70)" stroke-width="3"/>
+          <text x="68" y="${H - 31}" font-size="12" fill="#475569" font-family="${getComputedStyle(document.body).fontFamily}">Cabo</text>
+          <line x1="122" y1="${H - 35}" x2="154" y2="${H - 35}" stroke="rgba(14,165,233,.75)" stroke-width="3" stroke-dasharray="6 6"/>
+          <text x="162" y="${H - 31}" font-size="12" fill="#475569" font-family="${getComputedStyle(document.body).fontFamily}">Wi-Fi</text>
         </g>
       `;
 
@@ -1254,21 +1449,21 @@
       `;
     }
 
-    function escapeXML(str){
+    function escapeXML(str) {
       return String(str ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&apos;");
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&apos;");
     }
 
     // =========================
     // CRUD - Dispositivos
     // =========================
-    function openDeviceForm(device){
+    function openDeviceForm(device) {
       const isEdit = !!device;
-      const d = device || { id: null, nome:"", tipo:"Switch", ip:"", mac:"", local:"", notas:"" };
+      const d = device || { id: null, nome: "", tipo: "Switch", ip: "", mac: "", local: "", notas: "" };
 
       openModal({
         title: isEdit ? "Editar dispositivo" : "Novo dispositivo",
@@ -1282,8 +1477,8 @@
             <div class="field">
               <label>Tipo</label>
               <select id="f_tipo">
-                ${["Roteador","Switch","Access Point","Servidor","DVR/CFTV","Impressora","PDV/Terminal","Computador","Outro"].map(t => `
-                  <option value="${escapeHTML(t)}" ${t===d.tipo ? "selected":""}>${escapeHTML(t)}</option>
+                ${["Roteador", "Switch", "Access Point", "Servidor", "DVR/CFTV", "Impressora", "PDV/Terminal", "Computador", "Outro"].map(t => `
+                  <option value="${escapeHTML(t)}" ${t === d.tipo ? "selected" : ""}>${escapeHTML(t)}</option>
                 `).join("")}
               </select>
             </div>
@@ -1317,8 +1512,8 @@
         `,
         onSave: () => {
           const nome = $("#f_nome").value.trim();
-          if (!nome){
-            toast("bad","Validação","Informe um nome para o dispositivo.");
+          if (!nome) {
+            toast("bad", "Validação", "Informe um nome para o dispositivo.");
             $("#f_nome").focus();
             return;
           }
@@ -1334,13 +1529,13 @@
             updatedAt: nowISO(),
           };
 
-          if (isEdit){
+          if (isEdit) {
             const idx = appState.db.dispositivos.findIndex(x => x.id === d.id);
             if (idx >= 0) appState.db.dispositivos[idx] = payload;
-            toast("ok","Dispositivo","Alterações salvas.");
+            toast("ok", "Dispositivo", "Alterações salvas.");
           } else {
             appState.db.dispositivos.push(payload);
-            toast("ok","Dispositivo","Dispositivo criado.");
+            toast("ok", "Dispositivo", "Dispositivo criado.");
           }
 
           saveDB(appState.db);
@@ -1350,7 +1545,7 @@
       });
     }
 
-    function deleteDevice(id){
+    function deleteDevice(id) {
       const d = appState.db.dispositivos.find(x => x.id === id);
       if (!d) return;
 
@@ -1368,7 +1563,7 @@
           appState.db.conexoes = appState.db.conexoes.filter(l => l.deId !== id && l.paraId !== id);
           saveDB(appState.db);
           closeModal();
-          toast("ok","Exclusão","Dispositivo removido.");
+          toast("ok", "Exclusão", "Dispositivo removido.");
           render();
         }
       });
@@ -1380,12 +1575,12 @@
     // =========================
     // CRUD - Conexões
     // =========================
-    function openLinkForm(link){
+    function openLinkForm(link) {
       const isEdit = !!link;
-      const l = link || { id:null, deId:"", paraId:"", tipo:"Cabo", portaDe:"", portaPara:"", velocidade:"1 Gbps", notas:"" };
+      const l = link || { id: null, deId: "", paraId: "", tipo: "Cabo", portaDe: "", portaPara: "", velocidade: "1 Gbps", notas: "" };
 
-      if (appState.db.dispositivos.length < 2){
-        toast("bad","Conexões","Cadastre pelo menos 2 dispositivos antes.");
+      if (appState.db.dispositivos.length < 2) {
+        toast("bad", "Conexões", "Cadastre pelo menos 2 dispositivos antes.");
         navigate("/dispositivos");
         return;
       }
@@ -1419,7 +1614,7 @@
             <div class="field">
               <label>Tipo</label>
               <select id="f_ltipo">
-                ${["Cabo","Wi-Fi","Fibra/Uplink","VPN","Outro"].map(t => `
+                ${["Cabo", "Wi-Fi", "Fibra/Uplink", "VPN", "Outro"].map(t => `
                   <option value="${escapeHTML(t)}">${escapeHTML(t)}</option>
                 `).join("")}
               </select>
@@ -1427,7 +1622,7 @@
             <div class="field">
               <label>Velocidade</label>
               <select id="f_vel">
-                ${["100 Mbps","1 Gbps","2.5 Gbps","10 Gbps","—"].map(v => `
+                ${["100 Mbps", "1 Gbps", "2.5 Gbps", "10 Gbps", "—"].map(v => `
                   <option value="${escapeHTML(v)}">${escapeHTML(v)}</option>
                 `).join("")}
               </select>
@@ -1457,12 +1652,12 @@
         onSave: () => {
           const deId = $("#f_de").value;
           const paraId = $("#f_para").value;
-          if (!deId || !paraId){
-            toast("bad","Validação","Selecione 'De' e 'Para'.");
+          if (!deId || !paraId) {
+            toast("bad", "Validação", "Selecione 'De' e 'Para'.");
             return;
           }
-          if (deId === paraId){
-            toast("bad","Validação","'De' e 'Para' não podem ser o mesmo dispositivo.");
+          if (deId === paraId) {
+            toast("bad", "Validação", "'De' e 'Para' não podem ser o mesmo dispositivo.");
             return;
           }
 
@@ -1479,13 +1674,13 @@
             updatedAt: nowISO(),
           };
 
-          if (isEdit){
+          if (isEdit) {
             const idx = appState.db.conexoes.findIndex(x => x.id === l.id);
             if (idx >= 0) appState.db.conexoes[idx] = payload;
-            toast("ok","Conexão","Alterações salvas.");
+            toast("ok", "Conexão", "Alterações salvas.");
           } else {
             appState.db.conexoes.push(payload);
-            toast("ok","Conexão","Conexão criada.");
+            toast("ok", "Conexão", "Conexão criada.");
           }
 
           saveDB(appState.db);
@@ -1504,7 +1699,7 @@
       $("#f_lnotas").value = l.notas || "";
     }
 
-    function deleteLink(id){
+    function deleteLink(id) {
       const l = appState.db.conexoes.find(x => x.id === id);
       if (!l) return;
 
@@ -1521,7 +1716,7 @@
           appState.db.conexoes = appState.db.conexoes.filter(x => x.id !== id);
           saveDB(appState.db);
           closeModal();
-          toast("ok","Exclusão","Conexão removida.");
+          toast("ok", "Exclusão", "Conexão removida.");
           render();
         }
       });
@@ -1532,7 +1727,7 @@
     // =========================
     // Import / Export / Reset
     // =========================
-    function exportDB(){
+    function exportDB() {
       const payload = JSON.stringify(appState.db, null, 2);
       const blob = new Blob([payload], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -1545,30 +1740,30 @@
       a.remove();
       URL.revokeObjectURL(url);
 
-      toast("ok","Exportação","Arquivo JSON baixado.");
+      toast("ok", "Exportação", "Arquivo JSON baixado.");
     }
 
-    function importDBFromFile(file){
+    function importDBFromFile(file) {
       const fr = new FileReader();
       fr.onload = () => {
         const parsed = safeJSONParse(fr.result, null);
-        if (!parsed || typeof parsed !== "object"){
-          toast("bad","Importação","Arquivo inválido (JSON).");
+        if (!parsed || typeof parsed !== "object") {
+          toast("bad", "Importação", "Arquivo inválido (JSON).");
           return;
         }
-        if (!Array.isArray(parsed.dispositivos) || !Array.isArray(parsed.conexoes)){
-          toast("bad","Importação","JSON não parece do app (faltam coleções).");
+        if (!Array.isArray(parsed.dispositivos) || !Array.isArray(parsed.conexoes)) {
+          toast("bad", "Importação", "JSON não parece do app (faltam coleções).");
           return;
         }
         appState.db = parsed;
         saveDB(appState.db);
-        toast("ok","Importação","Dados importados com sucesso.");
+        toast("ok", "Importação", "Dados importados com sucesso.");
         render();
       };
       fr.readAsText(file);
     }
 
-    function resetDB(){
+    function resetDB() {
       openModal({
         title: "Resetar dados",
         saveLabel: "Resetar agora",
@@ -1582,7 +1777,7 @@
           appState.db = structuredClone(DEFAULT_DB);
           saveDB(appState.db);
           closeModal();
-          toast("ok","Reset","Base restaurada.");
+          toast("ok", "Reset", "Base restaurada.");
           render();
         }
       });
@@ -1593,18 +1788,18 @@
     // =========================
     // Helpers
     // =========================
-    function groupBy(arr, keyFn){
+    function groupBy(arr, keyFn) {
       const out = {};
-      for (const it of arr){
+      for (const it of arr) {
         const k = keyFn(it);
         out[k] = out[k] || [];
         out[k].push(it);
       }
       return out;
     }
-    function countBy(arr, keyFn){
+    function countBy(arr, keyFn) {
       const out = {};
-      for (const it of arr){
+      for (const it of arr) {
         const k = keyFn(it);
         out[k] = (out[k] || 0) + 1;
       }
@@ -1614,10 +1809,7 @@
     // =========================
     // Render + Events
     // =========================
-    function render(){
-      // refresh db in case other tabs changed it
-      appState.db = loadDB();
-
+    function render() {
       appState.route = getRouteFromHash();
       setActiveNav(appState.route);
 
@@ -1645,14 +1837,14 @@
 
       view.innerHTML = html;
 
-      // top status
-      $("#pillStatus").textContent = "● Offline (local)";
+      // atualiza o pill de status com estado Firebase
+      updateStatusPill();
 
       // bind per-route events
       bindEvents();
     }
 
-    function bindEvents(){
+    function bindEvents() {
       // Dashboard quick actions
       $("#dashNewDevice")?.addEventListener("click", () => openDeviceForm(null));
       $("#dashNewLink")?.addEventListener("click", () => openLinkForm(null));
@@ -1674,7 +1866,7 @@
 
       // Topologia
       $("#btnTopoRefresh")?.addEventListener("click", () => {
-        toast("ok","Topologia","Desenho atualizado.");
+        toast("ok", "Topologia", "Desenho atualizado.");
         render();
       });
 
@@ -1691,18 +1883,18 @@
         const action = btn.dataset.action;
         const id = btn.dataset.id;
 
-        if (action === "edit-device"){
+        if (action === "edit-device") {
           const d = appState.db.dispositivos.find(x => x.id === id);
           if (d) openDeviceForm(d);
         }
-        if (action === "del-device"){
+        if (action === "del-device") {
           deleteDevice(id);
         }
-        if (action === "edit-link"){
+        if (action === "edit-link") {
           const l = appState.db.conexoes.find(x => x.id === id);
           if (l) openLinkForm(l);
         }
-        if (action === "del-link"){
+        if (action === "del-link") {
           deleteLink(id);
         }
       }, { once: true });
@@ -1733,8 +1925,12 @@
 
     // init
     if (!location.hash) location.hash = "#/dashboard";
-    saveDB(appState.db); // garante meta updatedAt
+
+    // Carrega cache local instantaneamente, depois inicia sync Firebase
+    appState.db = loadDBFromCache();
     render();
+    initFirebaseSync();
   </script>
 </body>
+
 </html>

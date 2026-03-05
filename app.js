@@ -55,7 +55,7 @@ function updateSyncDot() {
 
 // ───────── IndexedDB Backups ─────────
 const Backups = {
-    DB: "gorillas_backups", STORE: "snapshots", VER: 1, MAX: 20,
+    DB: "gorillas_backups", STORE: "snapshots", VER: 1, MAX: 10,
     _open() { return new Promise((ok, fail) => { const r = indexedDB.open(this.DB, this.VER); r.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE, { keyPath: "id", autoIncrement: true }) }; r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error) }) },
     async create(name) { const db = await this._open(); const snap = { name: name || "Backup automático", timestamp: nowISO(), data: structuredClone(appState.db), deviceCount: appState.db.dispositivos.length, connectionCount: appState.db.conexoes.length }; return new Promise((ok, fail) => { const tx = db.transaction(this.STORE, "readwrite"); tx.objectStore(this.STORE).add(snap); tx.oncomplete = () => { this._enforce().then(ok) }; tx.onerror = () => fail(tx.error) }) },
     async list() { const db = await this._open(); return new Promise((ok, fail) => { const r = db.transaction(this.STORE, "readonly").objectStore(this.STORE).getAll(); r.onsuccess = () => ok(r.result.sort((a, b) => b.timestamp.localeCompare(a.timestamp))); r.onerror = () => fail(r.error) }) },
@@ -166,6 +166,7 @@ const appState = {
     topoEditMode: false,
     topoSnapGrid: true,
     topoSelected: null, // {type:'device'|'link',id}
+    topoHighlight: null, // {linkId,deId,paraId} — from Conexões "Ver na topologia"
     // rack
     selectedRack: null,
     // networks tab

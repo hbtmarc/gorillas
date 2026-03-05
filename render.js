@@ -32,6 +32,7 @@ function render() {
     if (appState.route === "/topologia") renderTopo();
     if (appState.route === "/racks") bindRackEvents();
     if (appState.route === "/redes") bindNetworkEvents();
+    if (appState.route === "/painel") renderDashTopo();
 
     // Hide inspector on non-topology pages
     if (appState.route !== "/topologia") { hideInspector(); appState.topoSelected = null }
@@ -102,12 +103,14 @@ function bindEvents() {
 
     // Delegated actions (devices, links, backups)
     $("#view")?.addEventListener("click", e => {
-        const btn = e.target.closest("button[data-action]"); if (!btn) return;
+        const btn = e.target.closest("[data-action]"); if (!btn) return;
         const action = btn.dataset.action, id = btn.dataset.id;
+        if (action === "detail-dev") { const d = appState.db.dispositivos.find(x => x.id === id); if (d) openDeviceDetail(d) }
         if (action === "edit-dev") { const d = appState.db.dispositivos.find(x => x.id === id); if (d) openDeviceForm(d) }
         if (action === "del-dev") deleteDevice(id);
         if (action === "edit-link") { const l = appState.db.conexoes.find(x => x.id === id); if (l) openLinkForm(l) }
         if (action === "del-link") deleteLink(id);
+        if (action === "topo-link") navigateToTopoLink(id);
         if (action === "restore-backup") {
             openModal({
                 title: "Restaurar backup", saveLabel: "Restaurar", saveClass: "btn-primary",
@@ -148,11 +151,10 @@ function bindEvents() {
                 else if (appState.topoSelected.type === "link") deleteLink(appState.topoSelected.id);
             }
             if (e.key === "Escape" && appState.topoSelected) {
-                appState.topoSelected = null; hideInspector(); renderTopo();
+                appState.topoSelected = null; appState.topoHighlight = null; hideInspector(); renderTopo();
             }
         };
         document.addEventListener("keydown", keyHandler);
-        // Clean up when route changes (simple, not perfect)
         const origHash = location.hash;
         const check = () => { if (location.hash !== origHash) document.removeEventListener("keydown", keyHandler) };
         window.addEventListener("hashchange", check, { once: true });

@@ -1102,15 +1102,22 @@ tr:hover td {
 }
 
 .rack-drop-zone {
-  background: rgba(0, 111, 255, .06);
-  border: 2px dashed var(--accent);
+  background: transparent;
+  border: 2px dashed transparent;
   border-radius: 3px;
-  opacity: 0;
-  transition: opacity var(--transition)
+  min-height: 26px;
+  transition: background var(--transition), border-color var(--transition)
 }
 
-.rack-drop-zone.active {
-  opacity: 1
+.rack-drop-zone:hover {
+  background: rgba(0, 111, 255, .06);
+  border-color: var(--accent)
+}
+
+.rack-drop-zone.drag-active {
+  background: rgba(0, 111, 255, .1);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 8px var(--accent-ring)
 }
 
 .rack-palette {
@@ -1441,4 +1448,150 @@ tr:hover td {
   .tabs {
     overflow-x: auto
   }
+}
+
+/* ---------- Device Link (B) ---------- */
+.dev-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transition)
+}
+
+.dev-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline
+}
+
+/* ---------- Detail Grid (B) ---------- */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden
+}
+
+.detail-grid-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  border-right: 1px solid var(--border-light)
+}
+
+.detail-grid-item:nth-child(2n) {
+  border-right: none
+}
+
+.detail-grid-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 2px
+}
+
+.detail-grid-value {
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-all
+}
+
+.detail-conn-row {
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light)
+}
+
+.detail-conn-row:last-child {
+  border-bottom: none
+}
+
+/* ---------- Dashboard Topo Canvas (A) ---------- */
+.dash-topo-canvas {
+  width: 100%;
+  height: 340px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  overflow: hidden;
+  position: relative
+}
+
+.dash-topo-canvas svg {
+  width: 100%;
+  height: 100%
+}
+
+/* ---------- Backup Disclosure (H) ---------- */
+.backup-details {
+  margin-top: 8px
+}
+
+.backup-details summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 8px 0;
+  user-select: none
+}
+
+.backup-details summary:hover {
+  text-decoration: underline
+}
+
+.backup-details .backup-list {
+  margin-top: 4px
+}
+
+/* ---------- Rack item drag-to-move ---------- */
+.rack-item-grip {
+  font-size: 10px;
+  opacity: .45;
+  margin-right: 4px;
+  cursor: grab;
+  user-select: none
+}
+
+.rack-item[draggable="true"] {
+  cursor: grab
+}
+
+.rack-item[draggable="true"]:active {
+  cursor: grabbing
+}
+
+.rack-item-dragging {
+  opacity: .35 !important;
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px
+}
+
+/* During a drag session, show rows as potential targets */
+.rack-dragging .rack-u {
+  transition: background .12s ease
+}
+
+.rack-u-drop-valid {
+  background: rgba(34, 197, 94, .15) !important;
+  outline: 2px solid #22c55e;
+  outline-offset: -2px;
+  border-radius: 3px;
+  z-index: 5
+}
+
+.rack-u-drop-invalid {
+  background: rgba(239, 68, 68, .1) !important;
+  outline: 2px solid #ef4444;
+  outline-offset: -2px;
+  border-radius: 3px
+}
+
+/* Hide drop zones during item move so they don't interfere */
+.rack-dragging .rack-drop-zone {
+  pointer-events: none
 }

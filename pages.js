@@ -3,7 +3,7 @@
    CRUD forms, export/import/clear, backup UI
    ============================================================ */
 
-// ───────── Page: Painel (Dashboard) ─────────
+// ───────── Page: Painel (Dashboard) — with topology canvas (A) ─────────
 function pagePainel() {
   const devs = appState.db.dispositivos, links = appState.db.conexoes;
   const wans = appState.db.wans || [], vpns = appState.db.vpns || [], wifis = appState.db.wifis || [];
@@ -33,16 +33,49 @@ function pagePainel() {
   </div>
   ${devs.length ? `
   <div class="card">
+    <div class="card-header">
+      <div><h2 class="card-title">Mapa da rede</h2><p class="card-desc">Visão geral da topologia (somente leitura). <a href="#/topologia" style="color:var(--accent);text-decoration:none;font-weight:600">Abrir editor →</a></p></div>
+    </div>
+    <div id="dashTopo" class="dash-topo-canvas"></div>
+  </div>
+  <div class="card">
     <div class="card-header"><div><h2 class="card-title">Por tipo</h2><p class="card-desc">Clique para filtrar na lista de dispositivos</p></div></div>
     <div class="stats-grid">${tipoCards}</div>
   </div>
   <div class="card">
     <div class="card-header"><div><h2 class="card-title">Por local</h2><p class="card-desc">Clique para filtrar na lista de dispositivos</p></div></div>
     <div class="stats-grid">${localCards}</div>
-  </div>`: ""}`
+  </div>
+  ${renderBandwidthCard(appState.db)}` : ""}`;
 }
 
-// ───────── Page: Dispositivos ─────────
+// ───────── Render dashboard topology mini-canvas (A) ─────────
+function renderDashTopo() {
+  const container = $("#dashTopo"); if (!container) return;
+  const devs = appState.db.dispositivos;
+  if (!devs.length) return;
+  // Use buildTopoSVG but as view-only (no edit mode, no selection)
+  const origEdit = appState.topoEditMode;
+  const origSel = appState.topoSelected;
+  const origHl = appState.topoHighlight;
+  appState.topoEditMode = false;
+  appState.topoSelected = null;
+  appState.topoHighlight = null;
+  const result = buildTopoSVG();
+  appState.topoEditMode = origEdit;
+  appState.topoSelected = origSel;
+  appState.topoHighlight = origHl;
+  // Render SVG + legend (read-only, no controls)
+  container.innerHTML = result.svg + result.legendHTML;
+  // Fit into the container
+  const svg = container.querySelector("svg");
+  if (svg) {
+    svg.style.cursor = "default";
+    svg.removeAttribute("id"); // don't conflict with main topo SVG
+  }
+}
+
+// ───────── Page: Dispositivos (B: device name as link) ─────────
 function pageDispositivos() {
   const q = (appState.searchDevices || "").trim().toLowerCase();
   const ft = appState.deviceFilter;
@@ -89,7 +122,7 @@ function pageDispositivos() {
         <th>Ações</th>
       </tr></thead>
       <tbody>${list.map(d => `<tr>
-        <td class="td-name">${esc(d.nome)}</td>
+        <td class="td-name"><a class="dev-link" href="javascript:void(0)" data-action="detail-dev" data-id="${esc(d.id)}">${esc(d.nome)}</a></td>
         <td><span class="badge">${esc(d.tipo || "—")}</span></td>
         <td>${esc(d.ip || "—")}</td>
         <td>${esc(d.local || "—")}</td>
@@ -101,7 +134,7 @@ function pageDispositivos() {
         </td>
       </tr>`).join("")}</tbody>
     </table></div>
-    `: `<div class="empty-state">
+    ` : `<div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/></svg>
       <div class="empty-state-title">Nenhum dispositivo encontrado</div>
       <div class="empty-state-desc">${q || ft.tipo || ft.local ? "Tente ajustar os filtros ou a busca." : "Adicione roteadores, switches e demais equipamentos da sua rede."}</div>
@@ -110,7 +143,64 @@ function pageDispositivos() {
   </div>`;
 }
 
-// ───────── Page: Conexões ─────────
+// ───────── Device Detail Modal (B) ─────────
+function openDeviceDetail(device) {
+  const d = device; if (!d) return;
+  const statusBadge = (s) => {
+    const m = { ativo: "badge-success", inativo: "badge-danger", "manutenção": "badge-warning", planejado: "badge" };
+    return `<span class="badge ${m[s] || "badge"}">${esc(s || "—")}</span>`;
+  };
+  const fields = [
+    ["Tipo", d.tipo], ["Fabricante", d.fabricante], ["Modelo", d.modelo],
+    ["Função", d.funcao], ["IP", d.ip], ["MAC", d.mac],
+    ["Serial", d.serial], ["Firmware", d.firmware],
+    ["Portas", d.portas], ["Uplinks", d.uplinks], ["PoE", d.poe ? "Sim" : ""],
+    ["Local", d.local], ["Criticidade", d.criticidade],
+    ["Rack", d.rack || ""], ["Posição U", d.posicaoU || ""],
+    ["Observações", d.notas],
+    ["Criado em", fmtDate(d.createdAt)], ["Atualizado", fmtDate(d.updatedAt)]
+  ].filter(([, v]) => v);
+
+  const connLinks = appState.db.conexoes.filter(l => l.deId === d.id || l.paraId === d.id);
+  const devById = new Map(appState.db.dispositivos.map(x => [x.id, x]));
+  const connHTML = connLinks.length ? `
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Conexões (${connLinks.length})</div>
+      ${connLinks.map(l => {
+    const other = l.deId === d.id ? devById.get(l.paraId) : devById.get(l.deId);
+    return `<div class="detail-conn-row">${esc(l.tipo || "Cabo")} → ${esc(other?.nome || "—")}${l.vlan ? ` <span class="badge" style="font-size:10px">VLAN ${esc(l.vlan)}</span>` : ""}</div>`;
+  }).join("")}
+    </div>` : "";
+
+  openModal({
+    title: "Detalhes do dispositivo", saveLabel: "", hideFooter: true, wide: true,
+    body: `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div>${deviceIconSVG(d.tipo, 32)}</div>
+      <div>
+        <div style="font-size:16px;font-weight:700">${esc(d.nome)}</div>
+        <div style="font-size:13px;color:var(--text-secondary)">${esc(d.tipo || "")}${d.ip ? " · " + esc(d.ip) : ""}</div>
+      </div>
+      <div style="margin-left:auto">${statusBadge(d.status)}</div>
+    </div>
+    <div class="detail-grid">
+      ${fields.map(([k, v]) => `<div class="detail-grid-item"><div class="detail-grid-label">${esc(k)}</div><div class="detail-grid-value">${esc(v)}</div></div>`).join("")}
+    </div>
+    ${connHTML}
+    <div style="margin-top:20px;display:flex;gap:8px;border-top:1px solid var(--border-light);padding-top:16px">
+      <button class="btn btn-primary" type="button" id="detailEdit">Editar</button>
+      <button class="btn" type="button" id="detailTopoView">Ver na topologia</button>
+      <button class="btn" type="button" id="detailClose" style="margin-left:auto">Fechar</button>
+    </div>`
+  });
+  setTimeout(() => {
+    $("#detailEdit")?.addEventListener("click", () => { closeModal(); openDeviceForm(d) });
+    $("#detailTopoView")?.addEventListener("click", () => { closeModal(); navigateToTopoDevice(d.id) });
+    $("#detailClose")?.addEventListener("click", closeModal);
+  }, 0);
+}
+
+// ───────── Page: Conexões (C: "Ver na topologia" button) ─────────
 function pageConexoes() {
   const q = (appState.searchLinks || "").trim().toLowerCase();
   const ft = appState.linkFilter;
@@ -159,15 +249,17 @@ function pageConexoes() {
         <td>${esc(l.velocidade || "—")}</td>
         <td>${esc(fmtDate(l.updatedAt))}</td>
         <td class="td-actions">
+          <button class="btn btn-sm btn-ghost" data-action="topo-link" data-id="${esc(l.id)}" title="Ver na topologia">🗺️</button>
           <button class="btn btn-sm btn-ghost" data-action="edit-link" data-id="${esc(l.id)}">Editar</button>
           <button class="btn btn-sm btn-danger" data-action="del-link" data-id="${esc(l.id)}">Remover</button>
-        </td></tr>`}).join("")}</tbody>
+        </td>
+      </tr>`}).join("")}</tbody>
     </table></div>
-    `: `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><div class="empty-state-title">Nenhuma conexão encontrada</div><div class="empty-state-desc">${q || ft.tipo ? "Ajuste os filtros ou a busca." : "Registre o primeiro link entre seus dispositivos."}</div>${!q && !ft.tipo ? '<button class="btn btn-primary" type="button" id="emptyNewLink">Adicionar conexão</button>' : ""}</div>`}
+    ` : `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><div class="empty-state-title">Nenhuma conexão encontrada</div><div class="empty-state-desc">${q || ft.tipo ? "Ajuste os filtros ou a busca." : "Registre o primeiro link entre seus dispositivos."}</div>${!q && !ft.tipo ? '<button class="btn btn-primary" type="button" id="emptyNewLink">Adicionar conexão</button>' : ""}</div>`}
   </div>`;
 }
 
-// ───────── Page: Configurações ─────────
+// ───────── Page: Configurações (H: max 10, disclosure) ─────────
 function pageConfiguracoes() {
   const db = appState.db; return `
   <div class="card">
@@ -189,7 +281,7 @@ function pageConfiguracoes() {
   </div>
   <div class="card">
     <div class="card-header">
-      <div><h2 class="card-title">Backups</h2><p class="card-desc">Crie e restaure snapshots do projeto. Máximo de 20 — o mais antigo é removido automaticamente.</p></div>
+      <div><h2 class="card-title">Backups</h2><p class="card-desc">Crie e restaure snapshots do projeto. Máximo de 10 — o mais antigo é removido automaticamente.</p></div>
       <div class="card-actions"><button class="btn btn-primary" type="button" id="cfgBackupCreate">Criar backup</button></div>
     </div>
     <div id="backupListArea"><p style="color:var(--text-tertiary);font-size:13px">Carregando…</p></div>
@@ -214,7 +306,7 @@ async function loadBackupList() {
   try {
     const list = await Backups.list();
     if (!list.length) { area.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-state-title">Nenhum backup</div><div class="empty-state-desc">Crie um backup para ter um ponto de restauração.</div></div>`; return }
-    area.innerHTML = `<div class="backup-list">${list.map(s => `
+    const renderItem = s => `
     <div class="backup-item">
       <div class="backup-item-info">
         <div class="backup-item-name">${esc(s.name)}</div>
@@ -224,7 +316,15 @@ async function loadBackupList() {
         <button class="btn btn-sm" data-action="restore-backup" data-id="${s.id}">Restaurar</button>
         <button class="btn btn-sm btn-danger" data-action="del-backup" data-id="${s.id}">Excluir</button>
       </div>
-    </div>`).join("")}</div>`;
+    </div>`;
+
+    const recent = list.slice(0, 3);
+    const older = list.slice(3);
+    let html = `<div class="backup-list">${recent.map(renderItem).join("")}</div>`;
+    if (older.length) {
+      html += `<details class="backup-details"><summary>Ver mais ${older.length} backup(s)</summary><div class="backup-list">${older.map(renderItem).join("")}</div></details>`;
+    }
+    area.innerHTML = html;
   } catch (e) { area.innerHTML = `<p style="color:var(--danger);font-size:13px">Erro ao carregar backups.</p>` }
 }
 
@@ -254,7 +354,9 @@ function openDeviceForm(device, preset) {
     <div class="form-group"><label class="form-label">MAC</label><input class="form-input" id="f_mac" placeholder="AA:BB:CC:DD:EE:FF" value="${esc(d.mac)}"/></div>
     <div class="form-group"><label class="form-label">Portas</label><input class="form-input" id="f_portas" placeholder="24, 48…" value="${esc(d.portas)}"/></div>
     <div class="form-group"><label class="form-label">Uplinks</label><input class="form-input" id="f_uplinks" placeholder="SFP+, RJ45 10G…" value="${esc(d.uplinks)}"/></div>
-    <div class="form-group"><label class="form-check"><input type="checkbox" id="f_poe" ${d.poe ? "checked" : ""}/> Suporta PoE</label></div>
+    <div class="form-group"><label class="form-label">Interface</label><select class="form-select" id="f_interface"><option value="">Selecione...</option>${INTERFACE_OPTIONS.map(o => `<option value="${esc(o)}" ${o === d.interface ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
+    <div class="form-group"><label class="form-label">Velocidade (Mbps)</label><input class="form-input" id="f_velocidade" type="number" min="0" placeholder="1000" value="${esc(d.velocidade)}"/><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">Usado no cálculo de balanço de rede</div></div>
+    <div class="form-group"><label class="form-check"><input type="checkbox" id="f_poe" ${d.poe ? 'checked' : ''}/> Suporta PoE</label></div>
     <div class="form-group"><label class="form-label">Local</label><input class="form-input" id="f_local" placeholder="Rack, Salão, Cozinha…" value="${esc(d.local)}"/></div>
     <div class="form-group"><label class="form-label">Criticidade</label><select class="form-select" id="f_criticidade">${CRITICIDADE_OPTIONS.map(c => `<option value="${esc(c)}" ${c === d.criticidade ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
     <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="f_status">${STATUS_OPTIONS.map(s => `<option value="${esc(s)}" ${s === d.status ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></div>
@@ -270,6 +372,7 @@ function openDeviceForm(device, preset) {
         funcao: $("#f_funcao").value.trim(), serial: $("#f_serial").value.trim(), firmware: $("#f_firmware").value.trim(),
         ip: $("#f_ip").value.trim(), mac: $("#f_mac").value.trim(), portas: $("#f_portas").value.trim(),
         uplinks: $("#f_uplinks").value.trim(), poe: $("#f_poe").checked,
+        interface: $("#f_interface").value, velocidade: $("#f_velocidade").value.trim(),
         local: $("#f_local").value.trim(), criticidade: $("#f_criticidade").value, status: $("#f_status").value,
         alturaU: parseInt($("#f_alturaU").value) || 1,
         notas: $("#f_notas").value.trim(), updatedAt: nowISO()
@@ -282,6 +385,19 @@ function openDeviceForm(device, preset) {
       saveDB(appState.db); closeModal(); render();
     }
   });
+  // Auto-populate velocity from interface selection
+  setTimeout(() => {
+    const ifSel = $('#f_interface');
+    const velInput = $('#f_velocidade');
+    if (ifSel && velInput) {
+      ifSel.addEventListener('change', () => {
+        const speed = INTERFACE_SPEEDS[ifSel.value];
+        if (speed && (!velInput.value || velInput.value === '0')) {
+          velInput.value = speed;
+        }
+      });
+    }
+  }, 0);
 }
 
 function deleteDevice(id) {
@@ -294,7 +410,6 @@ function deleteDevice(id) {
       await Backups.create("Antes de remover: " + d.nome);
       appState.db.dispositivos = appState.db.dispositivos.filter(x => x.id !== id);
       appState.db.conexoes = appState.db.conexoes.filter(l => l.deId !== id && l.paraId !== id);
-      // Remove from racks
       (appState.db.racks || []).forEach(r => { r.itens = r.itens.filter(it => it.dispositivoId !== id) });
       saveDB(appState.db); closeModal(); toast("success", "Removido", "Dispositivo removido."); render();
     }

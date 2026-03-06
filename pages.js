@@ -7,10 +7,11 @@
 function pagePainel() {
   const devs = appState.db.dispositivos, links = appState.db.conexoes;
   const wans = appState.db.wans || [], vpns = appState.db.vpns || [], wifis = appState.db.wifis || [];
-  const byTipo = countBy(devs, d => d.tipo || "Outro");
-  const byLocal = countBy(devs, d => d.local || "Sem local");
-  const critCount = devs.filter(d => d.criticidade === "crítica").length;
-  const inactiveCount = devs.filter(d => d.status === "inativo" || d.status === "manutenção").length;
+  const totalDevQty = devs.reduce((s, d) => s + (d.quantidade || 1), 0);
+  const byTipo = {}; devs.forEach(d => { const k = d.tipo || 'Outro'; byTipo[k] = (byTipo[k] || 0) + (d.quantidade || 1); });
+  const byLocal = {}; devs.forEach(d => { const k = d.local || 'Sem local'; byLocal[k] = (byLocal[k] || 0) + (d.quantidade || 1); });
+  const critCount = devs.filter(d => d.criticidade === "crítica").reduce((s, d) => s + (d.quantidade || 1), 0);
+  const inactiveCount = devs.filter(d => d.status === "inativo" || d.status === "manutenção").reduce((s, d) => s + (d.quantidade || 1), 0);
 
   const tipoCards = Object.entries(byTipo).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="stat-card" data-filter-tipo="${esc(k)}"><div class="stat-value">${v}</div><div class="stat-label">${esc(k)}</div></div>`).join("");
   const localCards = Object.entries(byLocal).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="stat-card" data-filter-local="${esc(k)}"><div class="stat-value">${v}</div><div class="stat-label">${esc(k)}</div></div>`).join("");
@@ -18,14 +19,14 @@ function pagePainel() {
   return `
   <div class="card">
     <div class="card-header">
-      <div><h2 class="card-title">Painel de controle</h2><p class="card-desc">${devs.length} dispositivo(s), ${links.length} conexão(ões), ${wans.length} WAN(s)${wifis.length ? `, ${wifis.length} rede(s) Wi-Fi` : ""}</p></div>
+      <div><h2 class="card-title">Painel de controle</h2><p class="card-desc">${totalDevQty} dispositivo(s)${totalDevQty !== devs.length ? ` (${devs.length} grupo(s))` : ''}, ${links.length} conexão(ões), ${wans.length} WAN(s)${wifis.length ? `, ${wifis.length} rede(s) Wi-Fi` : ""}</p></div>
       <div class="card-actions">
         <button class="btn btn-primary" type="button" id="dashNewDev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar</button>
         <button class="btn" type="button" id="dashTemplate">Usar template</button>
       </div>
     </div>
     <div class="stats-grid">
-      <div class="stat-card" style="cursor:default"><div class="stat-value">${devs.length}</div><div class="stat-label">Total de dispositivos</div></div>
+      <div class="stat-card" style="cursor:default"><div class="stat-value">${totalDevQty}</div><div class="stat-label">Total de dispositivos</div></div>
       <div class="stat-card" style="cursor:default"><div class="stat-value">${links.length}</div><div class="stat-label">Conexões</div></div>
       ${critCount ? `<div class="stat-card" style="cursor:default"><div class="stat-value" style="color:var(--danger)">${critCount}</div><div class="stat-label">Críticos</div></div>` : ""}
       ${inactiveCount ? `<div class="stat-card" style="cursor:default"><div class="stat-value" style="color:var(--warning)">${inactiveCount}</div><div class="stat-label">Inativos / Manutenção</div></div>` : ""}
@@ -122,7 +123,7 @@ function pageDispositivos() {
         <th>Ações</th>
       </tr></thead>
       <tbody>${list.map(d => `<tr>
-        <td class="td-name"><a class="dev-link" href="javascript:void(0)" data-action="detail-dev" data-id="${esc(d.id)}">${esc(d.nome)}</a></td>
+        <td class="td-name"><a class="dev-link" href="javascript:void(0)" data-action="detail-dev" data-id="${esc(d.id)}">${esc(d.nome)}</a>${(d.quantidade || 1) > 1 ? ` <span class="badge" style="font-size:10px;vertical-align:middle;background:var(--accent);color:#fff">×${d.quantidade}</span>` : ''}</td>
         <td><span class="badge">${esc(d.tipo || "—")}</span></td>
         <td>${esc(d.ip || "—")}</td>
         <td>${esc(d.local || "—")}</td>
@@ -356,6 +357,7 @@ function openDeviceForm(device, preset) {
     <div class="form-group"><label class="form-label">Uplinks</label><input class="form-input" id="f_uplinks" placeholder="SFP+, RJ45 10G…" value="${esc(d.uplinks)}"/></div>
     <div class="form-group"><label class="form-label">Interface</label><select class="form-select" id="f_interface"><option value="">Selecione...</option>${INTERFACE_OPTIONS.map(o => `<option value="${esc(o)}" ${o === d.interface ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
     <div class="form-group"><label class="form-label">Velocidade (Mbps)</label><input class="form-input" id="f_velocidade" type="number" min="0" placeholder="1000" value="${esc(d.velocidade)}"/><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">Usado no cálculo de balanço de rede</div></div>
+    <div class="form-group"><label class="form-label">Quantidade</label><input class="form-input" id="f_quantidade" type="number" min="1" max="9999" placeholder="1" value="${d.quantidade || 1}"/><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">Acima de 1 = grupo (ex: 30 tablets)</div></div>
     <div class="form-group"><label class="form-check"><input type="checkbox" id="f_poe" ${d.poe ? 'checked' : ''}/> Suporta PoE</label></div>
     <div class="form-group"><label class="form-label">Local</label><input class="form-input" id="f_local" placeholder="Rack, Salão, Cozinha…" value="${esc(d.local)}"/></div>
     <div class="form-group"><label class="form-label">Criticidade</label><select class="form-select" id="f_criticidade">${CRITICIDADE_OPTIONS.map(c => `<option value="${esc(c)}" ${c === d.criticidade ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
@@ -373,6 +375,7 @@ function openDeviceForm(device, preset) {
         ip: $("#f_ip").value.trim(), mac: $("#f_mac").value.trim(), portas: $("#f_portas").value.trim(),
         uplinks: $("#f_uplinks").value.trim(), poe: $("#f_poe").checked,
         interface: $("#f_interface").value, velocidade: $("#f_velocidade").value.trim(),
+        quantidade: parseInt($("#f_quantidade").value) || 1,
         local: $("#f_local").value.trim(), criticidade: $("#f_criticidade").value, status: $("#f_status").value,
         alturaU: parseInt($("#f_alturaU").value) || 1,
         notas: $("#f_notas").value.trim(), updatedAt: nowISO()
@@ -392,7 +395,7 @@ function openDeviceForm(device, preset) {
     if (ifSel && velInput) {
       ifSel.addEventListener('change', () => {
         const speed = INTERFACE_SPEEDS[ifSel.value];
-        if (speed && (!velInput.value || velInput.value === '0')) {
+        if (speed) {
           velInput.value = speed;
         }
       });

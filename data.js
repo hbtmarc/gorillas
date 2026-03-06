@@ -7,7 +7,7 @@
 const DEVICE_DEFAULTS = {
     id: "", nome: "", tipo: "", fabricante: "", modelo: "", funcao: "", serial: "", firmware: "",
     ip: "", mac: "", portas: "", uplinks: "", poe: false, local: "", criticidade: "normal", status: "ativo",
-    interface: "", velocidade: "",
+    interface: "", velocidade: "", quantidade: 1,
     rack: "", posicaoU: 0, alturaU: 1, notas: "",
     topoX: 0, topoY: 0, topoPinned: false,
     createdAt: "", updatedAt: ""

@@ -10,18 +10,21 @@ const DEVICE_DEFAULTS = {
     interface: "", velocidade: "", quantidade: 1,
     rack: "", posicaoU: 0, alturaU: 1, notas: "",
     topoX: 0, topoY: 0, topoPinned: false,
+    unidadeId: "",
     createdAt: "", updatedAt: ""
 };
 
-const WAN_DEFAULTS = { id: "", nome: "", isp: "", tipo: "Fibra", ip: "", gateway: "", dns: "", velocidadeDown: "", velocidadeUp: "", failover: false, balanceamento: false, dispositivoId: "", publicIp: "", prioridade: 1, peso: 1, porta: "", notas: "", createdAt: "", updatedAt: "" };
+const WAN_DEFAULTS = { id: "", nome: "", isp: "", tipo: "Fibra", ip: "", gateway: "", dns: "", velocidadeDown: "", velocidadeUp: "", failover: false, balanceamento: false, dispositivoId: "", publicIp: "", prioridade: 1, peso: 1, porta: "", notas: "", unidadeId: "", createdAt: "", updatedAt: "" };
 
-const VPN_DEFAULTS = { id: "", nome: "", tipo: "Site-to-Site", endpoint: "", psk: "", dispositivoIds: [], notas: "", createdAt: "", updatedAt: "" };
+const VPN_DEFAULTS = { id: "", nome: "", tipo: "Site-to-Site", endpoint: "", psk: "", dispositivoIds: [], notas: "", unidadeId: "", createdAt: "", updatedAt: "" };
 
-const WIFI_DEFAULTS = { id: "", ssid: "", banda: "2.4/5 GHz", seguranca: "WPA3", vlanTag: "", apIds: [], senha: "", oculta: false, notas: "", createdAt: "", updatedAt: "" };
+const WIFI_DEFAULTS = { id: "", ssid: "", banda: "2.4/5 GHz", seguranca: "WPA3", vlanTag: "", apIds: [], senha: "", oculta: false, notas: "", unidadeId: "", createdAt: "", updatedAt: "" };
 
-const VLAN_DEFAULTS = { id: "", tag: "", nome: "", subrede: "", gateway: "", notas: "", createdAt: "", updatedAt: "" };
+const VLAN_DEFAULTS = { id: "", tag: "", nome: "", subrede: "", gateway: "", notas: "", unidadeId: "", createdAt: "", updatedAt: "" };
 
-const RACK_DEFAULTS = { id: "", nome: "", local: "", totalU: 24, itens: [], notas: "", createdAt: "", updatedAt: "" };
+const RACK_DEFAULTS = { id: "", nome: "", local: "", totalU: 24, itens: [], notas: "", unidadeId: "", createdAt: "", updatedAt: "" };
+
+const UNIDADE_DEFAULTS = { id: "", nome: "", descricao: "", createdAt: "", updatedAt: "" };
 
 // Rack item: {dispositivoId,tipo,nome,posU,altU} — tipo can be "device","bandeja","patch_panel","blank","organizador","nvr"
 
@@ -44,12 +47,14 @@ const WIFI_BANDAS = ["2.4 GHz", "5 GHz", "2.4/5 GHz", "6 GHz", "Tri-band"];
 // ───────── Default DB v2 ─────────
 function createDefaultDB() {
     const now = nowISO();
+    const unidadePadrao = { ...UNIDADE_DEFAULTS, id: uid(), nome: "Gorillas - Principal", createdAt: now, updatedAt: now };
     return {
-        meta: { app: "GorillasNet", version: 2, createdAt: now, updatedAt: now },
+        meta: { app: "GorillasNet", version: 4, createdAt: now, updatedAt: now, activeUnidadeId: unidadePadrao.id },
+        unidades: [unidadePadrao],
         dispositivos: [
-            { ...DEVICE_DEFAULTS, id: uid(), nome: "Roteador Principal", tipo: "Roteador", fabricante: "Ubiquiti", modelo: "EdgeRouter X", ip: "192.168.0.1", mac: "AA:BB:CC:DD:EE:01", local: "Rack", funcao: "Gateway / DHCP", criticidade: "crítica", status: "ativo", alturaU: 1, createdAt: now, updatedAt: now },
-            { ...DEVICE_DEFAULTS, id: uid(), nome: "Switch 24p", tipo: "Switch", fabricante: "Ubiquiti", modelo: "USW-24-PoE", ip: "192.168.0.2", mac: "AA:BB:CC:DD:EE:02", local: "Rack", funcao: "Distribuição", poe: true, portas: "24", alturaU: 1, criticidade: "alta", status: "ativo", createdAt: now, updatedAt: now },
-            { ...DEVICE_DEFAULTS, id: uid(), nome: "AP Salão", tipo: "Access Point", fabricante: "Ubiquiti", modelo: "U6-Lite", ip: "192.168.0.10", mac: "AA:BB:CC:DD:EE:10", local: "Salão", funcao: "Wi-Fi clientes", alturaU: 0, criticidade: "alta", status: "ativo", createdAt: now, updatedAt: now },
+            { ...DEVICE_DEFAULTS, id: uid(), unidadeId: unidadePadrao.id, nome: "Roteador Principal", tipo: "Roteador", fabricante: "Ubiquiti", modelo: "EdgeRouter X", ip: "192.168.0.1", mac: "AA:BB:CC:DD:EE:01", local: "Rack", funcao: "Gateway / DHCP", criticidade: "crítica", status: "ativo", alturaU: 1, createdAt: now, updatedAt: now },
+            { ...DEVICE_DEFAULTS, id: uid(), unidadeId: unidadePadrao.id, nome: "Switch 24p", tipo: "Switch", fabricante: "Ubiquiti", modelo: "USW-24-PoE", ip: "192.168.0.2", mac: "AA:BB:CC:DD:EE:02", local: "Rack", funcao: "Distribuição", poe: true, portas: "24", alturaU: 1, criticidade: "alta", status: "ativo", createdAt: now, updatedAt: now },
+            { ...DEVICE_DEFAULTS, id: uid(), unidadeId: unidadePadrao.id, nome: "AP Salão", tipo: "Access Point", fabricante: "Ubiquiti", modelo: "U6-Lite", ip: "192.168.0.10", mac: "AA:BB:CC:DD:EE:10", local: "Salão", funcao: "Wi-Fi clientes", alturaU: 0, criticidade: "alta", status: "ativo", createdAt: now, updatedAt: now },
         ],
         conexoes: [],
         wans: [],
@@ -72,7 +77,8 @@ function migrateDB(db) {
     if (!Array.isArray(db.wifis)) db.wifis = [];
     if (!Array.isArray(db.vlans)) db.vlans = [];
     if (!Array.isArray(db.racks)) db.racks = [];
-    if (!db.meta) db.meta = { app: "GorillasNet", version: 2, createdAt: nowISO(), updatedAt: nowISO() };
+    if (!Array.isArray(db.unidades)) db.unidades = [];
+    if (!db.meta) db.meta = { app: "GorillasNet", version: 4, createdAt: nowISO(), updatedAt: nowISO() };
 
     if (v < 2) {
         db.dispositivos = db.dispositivos.map(d => ({ ...DEVICE_DEFAULTS, ...d }));
@@ -84,16 +90,56 @@ function migrateDB(db) {
         db.meta.version = 3;
         console.log("DB migrated to v3");
     }
+    if (v < 4) {
+        const now = nowISO();
+        if (!db.unidades.length) {
+            db.unidades.push({ ...UNIDADE_DEFAULTS, id: uid(), nome: "Gorillas - Principal", createdAt: now, updatedAt: now });
+        }
+        const unidadePadraoId = db.meta.activeUnidadeId || db.unidades[0].id;
+        db.meta.activeUnidadeId = unidadePadraoId;
+
+        db.dispositivos = (db.dispositivos || []).map(d => ({ ...DEVICE_DEFAULTS, ...d, unidadeId: d.unidadeId || unidadePadraoId }));
+        db.conexoes = (db.conexoes || []).map(c => ({ ...c, unidadeId: c.unidadeId || unidadePadraoId }));
+        db.wans = (db.wans || []).map(w => ({ ...WAN_DEFAULTS, ...w, unidadeId: w.unidadeId || unidadePadraoId }));
+        db.vpns = (db.vpns || []).map(vpn => ({ ...VPN_DEFAULTS, ...vpn, unidadeId: vpn.unidadeId || unidadePadraoId }));
+        db.wifis = (db.wifis || []).map(wf => ({ ...WIFI_DEFAULTS, ...wf, unidadeId: wf.unidadeId || unidadePadraoId }));
+        db.vlans = (db.vlans || []).map(vl => ({ ...VLAN_DEFAULTS, ...vl, unidadeId: vl.unidadeId || unidadePadraoId }));
+        db.racks = (db.racks || []).map(r => ({
+            ...RACK_DEFAULTS,
+            ...r,
+            unidadeId: r.unidadeId || unidadePadraoId,
+            itens: (r.itens || []).map(it => ({ ...it, unidadeId: it.unidadeId || r.unidadeId || unidadePadraoId }))
+        }));
+
+        db.meta.version = 4;
+        console.log("DB migrated to v4");
+    }
+    const unidadePadraoId = (db.meta && db.meta.activeUnidadeId) || (db.unidades[0] && db.unidades[0].id) || "";
+    if (unidadePadraoId) {
+        db.meta.activeUnidadeId = unidadePadraoId;
+        db.dispositivos = (db.dispositivos || []).map(d => ({ ...DEVICE_DEFAULTS, ...d, unidadeId: d.unidadeId || unidadePadraoId }));
+        db.conexoes = (db.conexoes || []).map(c => ({ ...c, unidadeId: c.unidadeId || unidadePadraoId }));
+        db.wans = (db.wans || []).map(w => ({ ...WAN_DEFAULTS, ...w, unidadeId: w.unidadeId || unidadePadraoId }));
+        db.vpns = (db.vpns || []).map(vpn => ({ ...VPN_DEFAULTS, ...vpn, unidadeId: vpn.unidadeId || unidadePadraoId }));
+        db.wifis = (db.wifis || []).map(wf => ({ ...WIFI_DEFAULTS, ...wf, unidadeId: wf.unidadeId || unidadePadraoId }));
+        db.vlans = (db.vlans || []).map(vl => ({ ...VLAN_DEFAULTS, ...vl, unidadeId: vl.unidadeId || unidadePadraoId }));
+        db.racks = (db.racks || []).map(r => ({
+            ...RACK_DEFAULTS,
+            ...r,
+            unidadeId: r.unidadeId || unidadePadraoId,
+            itens: (r.itens || []).map(it => ({ ...it, unidadeId: it.unidadeId || r.unidadeId || unidadePadraoId }))
+        }));
+    }
     return db;
 }
 
 // ───────── Helpers ─────────
-function newDevice(overrides = {}) { return { ...DEVICE_DEFAULTS, id: uid(), createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
-function newWan(overrides = {}) { return { ...WAN_DEFAULTS, id: uid(), createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
-function newVpn(overrides = {}) { return { ...VPN_DEFAULTS, id: uid(), createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
-function newWifi(overrides = {}) { return { ...WIFI_DEFAULTS, id: uid(), createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
-function newVlan(overrides = {}) { return { ...VLAN_DEFAULTS, id: uid(), createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
-function newRack(overrides = {}) { return { ...RACK_DEFAULTS, id: uid(), createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
+function newDevice(overrides = {}) { return { ...DEVICE_DEFAULTS, id: uid(), unidadeId: typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : '', createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
+function newWan(overrides = {}) { return { ...WAN_DEFAULTS, id: uid(), unidadeId: typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : '', createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
+function newVpn(overrides = {}) { return { ...VPN_DEFAULTS, id: uid(), unidadeId: typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : '', createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
+function newWifi(overrides = {}) { return { ...WIFI_DEFAULTS, id: uid(), unidadeId: typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : '', createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
+function newVlan(overrides = {}) { return { ...VLAN_DEFAULTS, id: uid(), unidadeId: typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : '', createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
+function newRack(overrides = {}) { return { ...RACK_DEFAULTS, id: uid(), unidadeId: typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : '', createdAt: nowISO(), updatedAt: nowISO(), ...overrides } }
 
 // ───────── Undo Stack ─────────
 const undoStack = [];

@@ -303,14 +303,14 @@ function pageConfiguracoes() {
     </div>
     <hr class="divider"/>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" type="button" id="cfgExport">Exportar dados</button>
-      <button class="btn" type="button" id="cfgImport">Importar dados</button>
-      <button class="btn btn-danger" type="button" id="cfgClear">Limpar tudo</button>
+      <button class="btn" type="button" id="cfgExport">Exportar unidade</button>
+      <button class="btn" type="button" id="cfgImport">Importar unidade</button>
+      <button class="btn btn-danger" type="button" id="cfgClear">Limpar unidade</button>
     </div>
   </div>
   <div class="card">
     <div class="card-header">
-      <div><h2 class="card-title">Backups</h2><p class="card-desc">Crie e restaure snapshots do projeto. Máximo de 10 — o mais antigo é removido automaticamente.</p></div>
+      <div><h2 class="card-title">Backups</h2><p class="card-desc">Crie e restaure snapshots da unidade ativa. Máximo de 10 por unidade — o mais antigo é removido automaticamente.</p></div>
       <div class="card-actions"><button class="btn btn-primary" type="button" id="cfgBackupCreate">Criar backup</button></div>
     </div>
     <div id="backupListArea"><p style="color:var(--text-tertiary);font-size:13px">Carregando…</p></div>
@@ -328,6 +328,107 @@ function pageConfiguracoes() {
       <strong>Escape</strong> — Fechar painel / desselecionar
     </div>
   </div>`;
+}
+
+// ───────── Page: Unidades ─────────
+function pageUnidades() {
+  const unidades = appState.fullDB?.unidades || [];
+  const active = getActiveUnidadeId();
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div><h2 class="card-title">Unidades</h2><p class="card-desc">Gerencie sites independentes com isolamento total de dados.</p></div>
+      <div class="card-actions"><button class="btn btn-primary" type="button" id="btnNewUnidade">Nova unidade</button></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nome</th><th>Descrição</th><th>Criado em</th><th>Ações</th></tr></thead>
+      <tbody>
+      ${unidades.map(u => `<tr>
+        <td class="td-name">${esc(u.nome)} ${u.id === active ? '<span class="badge badge-success" style="font-size:10px">Ativa</span>' : ''}</td>
+        <td>${esc(u.descricao || '—')}</td>
+        <td>${esc(fmtDate(u.createdAt))}</td>
+        <td class="td-actions">
+          ${u.id !== active ? `<button class="btn btn-sm btn-ghost" data-uaction="switch" data-id="${esc(u.id)}">Ativar</button>` : ''}
+          <button class="btn btn-sm btn-ghost" data-uaction="edit" data-id="${esc(u.id)}">Renomear</button>
+          <button class="btn btn-sm btn-danger" data-uaction="delete" data-id="${esc(u.id)}">Excluir</button>
+        </td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function openUnidadeForm(existing) {
+  const isEdit = !!existing;
+  const u = existing || { id: uid(), nome: '', descricao: '', createdAt: nowISO(), updatedAt: nowISO() };
+  openModal({
+    title: isEdit ? 'Editar unidade' : 'Nova unidade',
+    saveLabel: isEdit ? 'Salvar' : 'Criar',
+    body: `<div class="form-grid">
+      <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="f_unome" value="${esc(u.nome)}"/></div>
+      <div class="form-group full"><label class="form-label">Descrição</label><input class="form-input" id="f_udesc" value="${esc(u.descricao || '')}"/></div>
+    </div>`,
+    onSave: () => {
+      const nome = $('#f_unome').value.trim();
+      if (!nome) { toast('error', 'Validação', 'Informe um nome.'); return; }
+      const full = structuredClone(appState.fullDB);
+      if (isEdit) {
+        const i = full.unidades.findIndex(x => x.id === u.id);
+        if (i >= 0) full.unidades[i] = { ...full.unidades[i], nome, descricao: $('#f_udesc').value.trim(), updatedAt: nowISO() };
+      } else {
+        full.unidades.push({ ...u, nome, descricao: $('#f_udesc').value.trim(), createdAt: nowISO(), updatedAt: nowISO() });
+      }
+      saveFullDB(full, 'unidades');
+      setFullDB(full, false);
+      if (!isEdit) setActiveUnidade(u.id, false);
+      closeModal();
+      render();
+      toast('success', 'Unidades', isEdit ? 'Unidade atualizada.' : 'Unidade criada.');
+    }
+  });
+}
+
+function deleteUnidade(unidadeId) {
+  const full = appState.fullDB;
+  const u = (full.unidades || []).find(x => x.id === unidadeId);
+  if (!u) return;
+  if ((full.unidades || []).length <= 1) { toast('warning', 'Unidades', 'Mantenha ao menos 1 unidade.'); return; }
+  openModal({
+    title: 'Excluir unidade',
+    saveLabel: 'Excluir',
+    saveClass: 'btn-danger',
+    body: `<p style="font-size:13px;color:var(--text-secondary)">Digite <strong>${esc(u.nome)}</strong> para confirmar exclusão da unidade e de todos os dados dela.</p>
+    <input class="form-input" id="f_delu_confirm" placeholder="${esc(u.nome)}"/>`,
+    onSave: () => {
+      const txt = $('#f_delu_confirm').value.trim();
+      if (txt !== u.nome) { toast('warning', 'Confirmação', 'Nome não confere.'); return; }
+      const next = structuredClone(full);
+      next.unidades = next.unidades.filter(x => x.id !== unidadeId);
+      const cols = ['dispositivos', 'conexoes', 'wans', 'vpns', 'wifis', 'vlans', 'racks', 'portMeta'];
+      cols.forEach(col => { if (Array.isArray(next[col])) next[col] = next[col].filter(e => e.unidadeId !== unidadeId); });
+      if (next.meta?.activeUnidadeId === unidadeId) next.meta.activeUnidadeId = next.unidades[0].id;
+      saveFullDB(next, 'unidades');
+      setFullDB(next, false);
+      setActiveUnidade(next.meta.activeUnidadeId, false);
+      closeModal(); render(); toast('success', 'Unidades', 'Unidade excluída.');
+    }
+  });
+}
+
+function bindUnidadeEvents() {
+  $('#btnNewUnidade')?.addEventListener('click', () => openUnidadeForm(null));
+  $('#view')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-uaction]');
+    if (!btn) return;
+    const action = btn.dataset.uaction;
+    const id = btn.dataset.id;
+    if (action === 'switch') setActiveUnidade(id);
+    if (action === 'edit') {
+      const u = (appState.fullDB.unidades || []).find(x => x.id === id);
+      if (u) openUnidadeForm(u);
+    }
+    if (action === 'delete') deleteUnidade(id);
+  });
 }
 
 async function loadBackupList() {
@@ -508,27 +609,99 @@ function applyTemplate(key) {
 }
 
 // ───────── Export / Import / Clear ─────────
-function exportData() { downloadJSON(appState.db, "gorillas-rede.json"); toast("success", "Exportação", "Arquivo JSON baixado.") }
+function exportData() {
+  const unidadeId = getActiveUnidadeId();
+  const unidade = (appState.fullDB?.unidades || []).find(u => u.id === unidadeId);
+  const data = structuredClone(appState.db);
+  if (!data.meta) data.meta = {};
+  data.meta.app = "InfraMap";
+  data.meta.productName = "InfraMap";
+  const payload = {
+    tipo: 'inframap-unidade',
+    unidade: unidade || { id: unidadeId, nome: 'Unidade' },
+    meta: { app: 'InfraMap', productName: 'InfraMap' },
+    data,
+    exportedAt: nowISO()
+  };
+  const slug = (unidade?.nome || 'unidade').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  downloadJSON(payload, `inframap-unidade-${slug}.json`);
+  toast("success", "Exportação", "Unidade exportada.");
+}
 function importData(file) {
   const fr = new FileReader();
   fr.onload = async () => {
     const p = safeJSON(fr.result, null);
-    if (!p || !Array.isArray(p.dispositivos)) { toast("error", "Importação", "Arquivo inválido."); return }
-    await Backups.create("Antes de importar dados");
-    appState.db = migrateDB(p); saveDB(appState.db); toast("success", "Importação", "Dados importados."); render();
+    const isPackaged = p?.tipo === 'gorillas-unidade' || p?.tipo === 'inframap-unidade';
+    const importedData = isPackaged ? p.data : p;
+    const importedUnit = isPackaged ? p.unidade : null;
+    if (!importedData || !Array.isArray(importedData.dispositivos)) { toast("error", "Importação", "Arquivo inválido."); return }
+
+    openModal({
+      title: 'Importar unidade',
+      saveLabel: '', hideFooter: true,
+      body: `<div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;color:var(--text-secondary)">Escolha o destino da importação:</div>
+        <button class="btn" id="impCurrent">Substituir dados da unidade atual</button>
+        <button class="btn btn-primary" id="impNew">Criar nova unidade com estes dados</button>
+      </div>`
+    });
+
+    setTimeout(() => {
+      $('#impCurrent')?.addEventListener('click', async () => {
+        await Backups.create("Antes de importar unidade");
+        const data = migrateDB(importedData);
+        appState.db = data;
+        saveDB(appState.db);
+        closeModal(); toast('success', 'Importação', 'Dados importados na unidade atual.'); render();
+      });
+      $('#impNew')?.addEventListener('click', async () => {
+        const full = structuredClone(appState.fullDB);
+        const newUnitId = uid();
+        const now = nowISO();
+        full.unidades.push({ id: newUnitId, nome: importedUnit?.nome || 'Unidade importada', descricao: importedUnit?.descricao || '', createdAt: now, updatedAt: now });
+        const data = migrateDB(importedData);
+        const devIdMap = new Map((data.dispositivos || []).map(d => [d.id, uid()]));
+        const newDevices = (data.dispositivos || []).map(d => ({ ...d, id: devIdMap.get(d.id), unidadeId: newUnitId }));
+        const newLinks = (data.conexoes || []).map(l => ({ ...l, id: uid(), unidadeId: newUnitId, deId: devIdMap.get(l.deId) || l.deId, paraId: devIdMap.get(l.paraId) || l.paraId }));
+        const newWans = (data.wans || []).map(w => ({ ...w, id: uid(), unidadeId: newUnitId, dispositivoId: devIdMap.get(w.dispositivoId) || '' }));
+        const newVpns = (data.vpns || []).map(v => ({ ...v, id: uid(), unidadeId: newUnitId, dispositivoIds: (v.dispositivoIds || []).map(id => devIdMap.get(id)).filter(Boolean) }));
+        const newWifis = (data.wifis || []).map(w => ({ ...w, id: uid(), unidadeId: newUnitId, apIds: (w.apIds || []).map(id => devIdMap.get(id)).filter(Boolean) }));
+        const newVlans = (data.vlans || []).map(v => ({ ...v, id: uid(), unidadeId: newUnitId }));
+        const newRacks = (data.racks || []).map(r => ({
+          ...r,
+          id: uid(),
+          unidadeId: newUnitId,
+          itens: (r.itens || []).map(it => ({ ...it, unidadeId: newUnitId, dispositivoId: devIdMap.get(it.dispositivoId) || '' }))
+        }));
+
+        full.dispositivos = (full.dispositivos || []).concat(newDevices);
+        full.conexoes = (full.conexoes || []).concat(newLinks);
+        full.wans = (full.wans || []).concat(newWans);
+        full.vpns = (full.vpns || []).concat(newVpns);
+        full.wifis = (full.wifis || []).concat(newWifis);
+        full.vlans = (full.vlans || []).concat(newVlans);
+        full.racks = (full.racks || []).concat(newRacks);
+        full.meta.activeUnidadeId = newUnitId;
+        saveFullDB(full, 'unidades');
+        setFullDB(full, false);
+        setActiveUnidade(newUnitId, false);
+        closeModal(); toast('success', 'Importação', 'Unidade importada em novo site.'); render();
+      });
+    }, 0);
   }; fr.readAsText(file);
 }
 function clearAll() {
   openModal({
-    title: "Limpar todos os dados", saveLabel: "Limpar tudo", saveClass: "btn-danger",
-    body: `<p style="font-size:13px;color:var(--text-secondary);line-height:1.5">Esta ação apagará <strong>todos</strong> os dispositivos, conexões, WANs, VPNs, redes Wi-Fi, VLANs e racks. Um backup automático será criado antes.</p>
+    title: "Limpar dados da unidade", saveLabel: "Limpar unidade", saveClass: "btn-danger",
+    body: `<p style="font-size:13px;color:var(--text-secondary);line-height:1.5">Esta ação apagará os dados da <strong>unidade ativa</strong> (dispositivos, conexões, WANs, VPNs, redes Wi-Fi, VLANs e racks). Um backup automático será criado antes.</p>
     <p style="font-size:13px;color:var(--text-secondary)">Para confirmar, digite <strong>LIMPAR</strong> abaixo:</p>
     <div class="confirm-input-wrap"><input class="form-input" id="confirmClear" placeholder="LIMPAR" autocomplete="off"/></div>`,
     onSave: async () => {
       if ($("#confirmClear").value.trim() !== "LIMPAR") { toast("warning", "Confirmação", 'Digite "LIMPAR" para confirmar.'); return }
       pushUndo("Antes de limpar tudo", structuredClone(appState.db));
       await Backups.create("Antes de limpar tudo");
-      appState.db = createDefaultDB(); saveDB(appState.db); closeModal(); toast("success", "Pronto", "Todos os dados foram removidos."); render();
+      appState.db = { ...appState.db, dispositivos: [], conexoes: [], wans: [], vpns: [], wifis: [], vlans: [], racks: [] };
+      saveDB(appState.db); closeModal(); toast("success", "Pronto", "Dados da unidade removidos."); render();
     }
   });
 }

@@ -19,6 +19,7 @@ function render() {
     else if (appState.route === "/racks") html = pageRacks();
     else if (appState.route === "/portas") html = pagePortas();
     else if (appState.route === "/relatorios") html = pageRelatorios();
+    else if (appState.route === "/unidades") html = pageUnidades();
     else if (appState.route === "/configuracoes") html = pageConfiguracoes();
     else html = `<div class="card"><div class="card-header"><div><h2 class="card-title">Página não encontrada</h2></div></div><button class="btn" type="button" id="goHome">Voltar ao painel</button></div>`;
 
@@ -27,6 +28,7 @@ function render() {
 
     view.innerHTML = html;
     updateSyncDot();
+    renderUnidadeSelector();
     bindEvents();
 
     // Page-specific post-render
@@ -35,6 +37,7 @@ function render() {
     if (appState.route === "/racks") bindRackEvents();
     if (appState.route === "/portas") bindPortEvents();
     if (appState.route === "/redes") bindNetworkEvents();
+    if (appState.route === "/unidades") bindUnidadeEvents();
     if (appState.route === "/painel") renderDashTopo();
     if (appState.route === "/relatorios") bindReportEvents();
 
@@ -85,11 +88,13 @@ function bindEvents() {
         if (name === null) return;
         await Backups.create(name || "Backup manual"); toast("success", "Backup", "Backup criado."); loadBackupList();
     });
-    $("#cfgBackupExport")?.addEventListener("click", async () => { const j = await Backups.exportAll(); downloadJSON(j, "gorillas-backups.json"); toast("success", "Backups", "Backups exportados.") });
+    $("#cfgBackupExport")?.addEventListener("click", async () => { const j = await Backups.exportAll(); downloadJSON(j, "inframap-backups.json"); toast("success", "Backups", "Backups exportados.") });
     $("#cfgBackupImport")?.addEventListener("click", () => $("#fileImportBackups").click());
 
     // Undo button
     $("#btnUndo")?.addEventListener("click", performUndo);
+    $("#btnUnitsPage")?.addEventListener("click", () => navigate("/unidades"));
+    $("#unitSelect")?.addEventListener("change", e => setActiveUnidade(e.target.value));
 
     // Table sort - Dispositivos
     $$("#view th[data-sort]").forEach(th => th.addEventListener("click", () => {
@@ -173,7 +178,7 @@ $("#fileImportBackups").addEventListener("change", e => { const f = e.target.fil
 
 // ───────── Init ─────────
 if (!location.hash) location.hash = "#/painel";
-appState.db = loadCache();
+setFullDB(loadCache(), false);
 render();
 initFirebase();
 if (typeof SyncEngine !== 'undefined') SyncEngine.init();

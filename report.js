@@ -242,7 +242,7 @@ function generatePrintReport(opts) {
   }
 
   // ── Footer ──
-  bodyHTML += `<div class="rpt-footer">Gorillas &bull; Relatório gerado em ${esc(dateStr)}</div>`;
+  bodyHTML += `<div class="rpt-footer">InfraMap &bull; Relatório gerado em ${esc(dateStr)}</div>`;
 
   // Build complete HTML document
   const fullHTML = buildPrintDocument(bodyHTML, opts);
@@ -260,7 +260,7 @@ function buildReportHeader(dateStr, filterSummary) {
         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
       </svg>
       <div>
-        <div class="rpt-header-title">Gorillas &bull; Relatório de Rede</div>
+        <div class="rpt-header-title">InfraMap &bull; Relatório de Rede</div>
         <div class="rpt-header-sub">${esc(dateStr)}</div>
       </div>
     </div>
@@ -481,7 +481,7 @@ function printSingleDevice(deviceId) {
 
   let bodyHTML = buildReportHeader(now, "Detalhes de dispositivo: " + d.nome);
   bodyHTML += buildDevicesSection([d], links, devById, { includeNotas: true, includeIpMac: true });
-  bodyHTML += `<div class="rpt-footer">Gorillas &bull; Relatório gerado em ${esc(now)}</div>`;
+  bodyHTML += `<div class="rpt-footer">InfraMap &bull; Relatório gerado em ${esc(now)}</div>`;
 
   openPrintWindow(buildPrintDocument(bodyHTML, { orientation: "portrait" }));
 }
@@ -518,7 +518,7 @@ function printSingleConnection(linkId) {
     bodyHTML += `</div>`;
   }
 
-  bodyHTML += `<div class="rpt-footer">Gorillas &bull; Relatório gerado em ${esc(now)}</div>`;
+  bodyHTML += `<div class="rpt-footer">InfraMap &bull; Relatório gerado em ${esc(now)}</div>`;
   openPrintWindow(buildPrintDocument(bodyHTML, { orientation: "portrait" }));
 }
 
@@ -572,7 +572,7 @@ function buildPrintDocument(bodyHTML, opts) {
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Gorillas — Relatório de Rede</title>
+<title>inframap-relatorio</title>
 <style>
 /* ── Print Document Styles ── */
 @page { size: A4 ${orient}; margin: 16mm 14mm; }

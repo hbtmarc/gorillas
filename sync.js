@@ -31,7 +31,7 @@ const SyncEngine = {
   },
 
   // ───────── Queue operations ─────────
-  async enqueue(collection, entityId, op) {
+  async enqueue(collection, entityId, op, unidadeId) {
     try {
       const db = await this._open();
       return new Promise((resolve, reject) => {
@@ -40,6 +40,7 @@ const SyncEngine = {
           collection: collection || 'data',
           entityId: entityId || '',
           op: op || 'update',
+          unidadeId: unidadeId || (typeof getActiveUnidadeId === 'function' ? getActiveUnidadeId() : ''),
           timestamp: new Date().toISOString()
         });
         tx.oncomplete = resolve;
@@ -109,7 +110,7 @@ const SyncEngine = {
   },
 
   // ───────── Merge (last-write-wins per entity by updatedAt) ─────────
-  COLLECTIONS: ['dispositivos', 'conexoes', 'wans', 'vpns', 'wifis', 'vlans', 'racks'],
+  COLLECTIONS: ['unidades', 'dispositivos', 'conexoes', 'wans', 'vpns', 'wifis', 'vlans', 'racks'],
 
   mergeDB(local, remote) {
     if (!remote || typeof remote !== 'object') return local;
@@ -121,8 +122,9 @@ const SyncEngine = {
       const rArr = remote[col] || [];
       if (!rArr.length && !lArr.length) continue;
 
-      const lMap = new Map(lArr.map(i => [i.id, i]));
-      const rMap = new Map(rArr.map(i => [i.id, i]));
+      const keyOf = (i) => `${i.unidadeId || ''}::${i.id}`;
+      const lMap = new Map(lArr.map(i => [keyOf(i), i]));
+      const rMap = new Map(rArr.map(i => [keyOf(i), i]));
       const allIds = new Set([...lMap.keys(), ...rMap.keys()]);
       const result = [];
 
@@ -167,7 +169,7 @@ const SyncEngine = {
     try {
       const pending = await this.hasPending();
       if (!pending) return;
-      await dbRef.set(appState.db);
+      await dbRef.set(appState.fullDB || appState.db);
       await this.clearQueue();
       await this.setMeta('lastSyncAt', nowISO());
       console.log('[sync] synced on reconnect');
@@ -181,26 +183,29 @@ const SyncEngine = {
     if (!remoteData || typeof remoteData !== 'object') return;
     const migrated = migrateDB(remoteData);
     const pending = await this.hasPending();
+    const localFull = appState.fullDB || appState.db;
 
     if (pending) {
       // Local changes pending — merge, local newer items win
-      const merged = this.mergeDB(appState.db, migrated);
-      const localStr = JSON.stringify(appState.db);
+      const merged = this.mergeDB(localFull, migrated);
+      const localStr = JSON.stringify(localFull);
       const mergedStr = JSON.stringify(merged);
       if (mergedStr !== localStr) {
-        appState.db = merged;
+        appState.fullDB = merged;
         saveCache(merged);
+        if (typeof setFullDB === 'function') setFullDB(merged, false);
         render();
       }
       // Push our merged state
       this.syncNow();
     } else {
       // No pending changes — accept remote if different
-      const localStr = JSON.stringify(appState.db);
+      const localStr = JSON.stringify(localFull);
       const remoteStr = JSON.stringify(migrated);
       if (remoteStr !== localStr) {
-        appState.db = migrated;
+        appState.fullDB = migrated;
         saveCache(migrated);
+        if (typeof setFullDB === 'function') setFullDB(migrated, false);
         render();
       }
     }

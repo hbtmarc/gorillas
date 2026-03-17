@@ -193,6 +193,11 @@ p {
   animation: pulse 2s infinite
 }
 
+.topbar .form-select,
+.topbar .btn {
+  color: var(--text)
+}
+
 @keyframes pulse {
 
   0%,

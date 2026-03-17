@@ -22,22 +22,115 @@ function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTi
 
 // ───────── Data Layer ─────────
 const DB_KEY = "gorillas_netdb_v1";
+const ACTIVE_UNIDADE_KEY = "gorillas_active_unidade";
+const SCOPED_COLLECTIONS = ["dispositivos", "conexoes", "wans", "vpns", "wifis", "vlans", "racks", "portMeta"];
+
+function getActiveUnidadeId() {
+    return appState?.activeUnidadeId || localStorage.getItem(ACTIVE_UNIDADE_KEY) || "";
+}
+function ensureUnidades(db) {
+    if (!Array.isArray(db.unidades)) db.unidades = [];
+    if (!db.unidades.length) {
+        const now = nowISO();
+        db.unidades.push({ id: uid(), nome: "Gorillas - Principal", descricao: "", createdAt: now, updatedAt: now });
+    }
+    if (!db.meta) db.meta = { app: "GorillasNet", version: 4, createdAt: nowISO(), updatedAt: nowISO() };
+    if (!db.meta.activeUnidadeId || !db.unidades.some(u => u.id === db.meta.activeUnidadeId)) {
+        db.meta.activeUnidadeId = db.unidades[0].id;
+    }
+    return db;
+}
+function stampUnidadeInEntity(entity, unidadeId, colName) {
+    if (!entity.unidadeId && !entity.id) entity.id = uid();
+    if (!entity.unidadeId) console.warn(`[unidades] write sem unidadeId em ${colName}`, entity);
+    if (entity.unidadeId && entity.unidadeId !== unidadeId) console.error(`[unidades] write com unidadeId divergente em ${colName}`, entity);
+    return { ...entity, unidadeId };
+}
+function normalizeScopedForSave(scopedDb, unidadeId) {
+    const scoped = structuredClone(scopedDb || {});
+    SCOPED_COLLECTIONS.forEach(col => {
+        if (!Array.isArray(scoped[col])) scoped[col] = [];
+        scoped[col] = scoped[col].map(e => stampUnidadeInEntity(e, unidadeId, col));
+    });
+    scoped.racks = (scoped.racks || []).map(r => ({
+        ...r,
+        unidadeId,
+        itens: (r.itens || []).map(it => ({ ...it, unidadeId }))
+    }));
+    return scoped;
+}
+function withUnidade(unidadeId) {
+    const full = appState.fullDB || createDefaultDB();
+    const uid = unidadeId || getActiveUnidadeId();
+    const scoped = {
+        meta: { ...full.meta },
+        unidades: structuredClone(full.unidades || []),
+        dispositivos: [], conexoes: [], wans: [], vpns: [], wifis: [], vlans: [], racks: [], portMeta: []
+    };
+    SCOPED_COLLECTIONS.forEach(col => {
+        const arr = Array.isArray(full[col]) ? full[col] : [];
+        scoped[col] = arr.filter(e => e.unidadeId === uid).map(e => structuredClone(e));
+    });
+    return scoped;
+}
+function setActiveUnidade(unidadeId, rerender = true) {
+    if (!appState.fullDB) return;
+    if (!appState.fullDB.unidades.some(u => u.id === unidadeId)) return;
+    appState.activeUnidadeId = unidadeId;
+    appState.fullDB.meta.activeUnidadeId = unidadeId;
+    localStorage.setItem(ACTIVE_UNIDADE_KEY, unidadeId);
+    appState.db = withUnidade(unidadeId);
+    appState.selectedRack = null;
+    appState.selectedSwitch = null;
+    if (rerender) render();
+}
+function mergeScopedIntoFull(scopedDb, unidadeId) {
+    const full = structuredClone(appState.fullDB || createDefaultDB());
+    ensureUnidades(full);
+    const scoped = normalizeScopedForSave(scopedDb, unidadeId);
+    SCOPED_COLLECTIONS.forEach(col => {
+        const arr = Array.isArray(full[col]) ? full[col] : [];
+        const other = arr.filter(e => e.unidadeId !== unidadeId);
+        full[col] = other.concat(scoped[col] || []);
+    });
+    return full;
+}
+function setFullDB(db, rerender = true) {
+    const migrated = migrateDB(structuredClone(db || createDefaultDB()));
+    ensureUnidades(migrated);
+    appState.fullDB = migrated;
+    const preferred = getActiveUnidadeId() || migrated.meta.activeUnidadeId || migrated.unidades[0].id;
+    const active = migrated.unidades.some(u => u.id === preferred) ? preferred : migrated.unidades[0].id;
+    setActiveUnidade(active, false);
+    if (rerender) render();
+}
 function loadCache() {
     const r = localStorage.getItem(DB_KEY);
     if (!r) return createDefaultDB();
     const p = safeJSON(r, null);
     if (!p || typeof p !== "object") return createDefaultDB();
-    return migrateDB(p);
+    const migrated = migrateDB(p);
+    if (JSON.stringify(p) !== JSON.stringify(migrated)) saveCache(migrated);
+    return migrated;
 }
 function saveCache(db) { localStorage.setItem(DB_KEY, JSON.stringify(db)) }
-function saveDB(db, collection) {
-    db.meta.updatedAt = nowISO(); saveCache(db);
+function saveFullDB(fullDb, collection) {
+    ensureUnidades(fullDb);
+    fullDb.meta.updatedAt = nowISO();
+    saveCache(fullDb);
     if (typeof SyncEngine !== 'undefined') {
-        SyncEngine.enqueue(collection || 'data', '', 'update').catch(() => {});
-        SyncEngine.pushIfOnline(db);
+        SyncEngine.enqueue(collection || 'data', '', 'update', getActiveUnidadeId()).catch(() => {});
+        SyncEngine.pushIfOnline(fullDb);
     } else {
-        dbRef.set(db).catch(e => console.warn('[sync] push deferred:', e.message));
+        dbRef.set(fullDb).catch(e => console.warn('[sync] push deferred:', e.message));
     }
+}
+function saveDB(db, collection) {
+    const unidadeId = getActiveUnidadeId();
+    const merged = mergeScopedIntoFull(db, unidadeId);
+    appState.fullDB = merged;
+    appState.db = withUnidade(unidadeId);
+    saveFullDB(merged, collection);
 }
 function initFirebase() {
     rtdb.ref(".info/connected").on("value", s => { firebaseConnected = !!s.val(); updateSyncDot() });
@@ -47,11 +140,12 @@ function initFirebase() {
             if (typeof SyncEngine !== 'undefined') {
                 SyncEngine.handleRemoteUpdate(d);
             } else {
-                const migrated = migrateDB(d);
-                appState.db = migrated; saveCache(migrated); render();
+                setFullDB(d);
             }
         } else {
-            const init = loadCache(); dbRef.set(init).catch(e => console.error(e));
+            const init = loadCache();
+            setFullDB(init, false);
+            dbRef.set(appState.fullDB).catch(e => console.error(e));
         }
     }, e => { console.error("listener error", e); });
 }
@@ -61,19 +155,27 @@ function updateSyncDot() {
     dot.classList.toggle("disconnected", !firebaseConnected);
     dot.title = firebaseConnected ? "Dados sincronizados" : "Verificando conexão…";
 }
+function renderUnidadeSelector() {
+    const sel = $("#unitSelect");
+    if (!sel || !appState.fullDB) return;
+    const unidades = appState.fullDB.unidades || [];
+    const active = getActiveUnidadeId();
+    sel.innerHTML = unidades.map(u => `<option value="${esc(u.id)}" ${u.id === active ? "selected" : ""}>${esc(u.nome)}</option>`).join("");
+    sel.title = unidades.find(u => u.id === active)?.nome || "Unidade";
+}
 
 // ───────── IndexedDB Backups ─────────
 const Backups = {
     DB: "gorillas_backups", STORE: "snapshots", VER: 1, MAX: 10,
     _open() { return new Promise((ok, fail) => { const r = indexedDB.open(this.DB, this.VER); r.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE, { keyPath: "id", autoIncrement: true }) }; r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error) }) },
-    async create(name) { const db = await this._open(); const snap = { name: name || "Backup automático", timestamp: nowISO(), data: structuredClone(appState.db), deviceCount: appState.db.dispositivos.length, connectionCount: appState.db.conexoes.length }; return new Promise((ok, fail) => { const tx = db.transaction(this.STORE, "readwrite"); tx.objectStore(this.STORE).add(snap); tx.oncomplete = () => { this._enforce().then(ok) }; tx.onerror = () => fail(tx.error) }) },
-    async list() { const db = await this._open(); return new Promise((ok, fail) => { const r = db.transaction(this.STORE, "readonly").objectStore(this.STORE).getAll(); r.onsuccess = () => ok(r.result.sort((a, b) => b.timestamp.localeCompare(a.timestamp))); r.onerror = () => fail(r.error) }) },
+    async create(name) { const db = await this._open(); const snap = { unidadeId: getActiveUnidadeId(), name: name || "Backup automático", timestamp: nowISO(), data: structuredClone(appState.db), deviceCount: appState.db.dispositivos.length, connectionCount: appState.db.conexoes.length }; return new Promise((ok, fail) => { const tx = db.transaction(this.STORE, "readwrite"); tx.objectStore(this.STORE).add(snap); tx.oncomplete = () => { this._enforce().then(ok) }; tx.onerror = () => fail(tx.error) }) },
+    async list() { const db = await this._open(); const unidadeId = getActiveUnidadeId(); return new Promise((ok, fail) => { const r = db.transaction(this.STORE, "readonly").objectStore(this.STORE).getAll(); r.onsuccess = () => ok((r.result || []).filter(s => (s.unidadeId || unidadeId) === unidadeId).sort((a, b) => b.timestamp.localeCompare(a.timestamp))); r.onerror = () => fail(r.error) }) },
     async get(id) { const db = await this._open(); return new Promise((ok, fail) => { const r = db.transaction(this.STORE, "readonly").objectStore(this.STORE).get(id); r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error) }) },
     async remove(id) { const db = await this._open(); return new Promise((ok, fail) => { const tx = db.transaction(this.STORE, "readwrite"); tx.objectStore(this.STORE).delete(id); tx.oncomplete = () => ok(); tx.onerror = () => fail(tx.error) }) },
     async restore(id) { const s = await this.get(id); if (!s) throw new Error("Não encontrado"); appState.db = migrateDB(structuredClone(s.data)); saveDB(appState.db); return s },
     async _enforce() { const all = await this.list(); if (all.length <= this.MAX) return; const del = all.slice(this.MAX); const db = await this._open(); const tx = db.transaction(this.STORE, "readwrite"); const st = tx.objectStore(this.STORE); del.forEach(s => st.delete(s.id)); return new Promise(ok => { tx.oncomplete = ok }) },
     async exportAll() { return JSON.stringify(await this.list(), null, 2) },
-    async importAll(json) { const arr = safeJSON(json, null); if (!Array.isArray(arr)) throw new Error("Inválido"); const db = await this._open(); const tx = db.transaction(this.STORE, "readwrite"); const st = tx.objectStore(this.STORE); arr.forEach(s => { delete s.id; st.add(s) }); return new Promise((ok, fail) => { tx.oncomplete = () => { this._enforce().then(ok) }; tx.onerror = () => fail(tx.error) }) }
+    async importAll(json) { const arr = safeJSON(json, null); if (!Array.isArray(arr)) throw new Error("Inválido"); const db = await this._open(); const tx = db.transaction(this.STORE, "readwrite"); const st = tx.objectStore(this.STORE); const unidadeId = getActiveUnidadeId(); arr.forEach(s => { delete s.id; s.unidadeId = s.unidadeId || unidadeId; st.add(s) }); return new Promise((ok, fail) => { tx.oncomplete = () => { this._enforce().then(ok) }; tx.onerror = () => fail(tx.error) }) }
 };
 
 // ───────── Toast ─────────
@@ -220,7 +322,10 @@ const NET_TEMPLATES = [
 
 // ───────── App State ─────────
 const appState = {
-    db: null, route: "/painel",
+    db: null,
+    fullDB: null,
+    activeUnidadeId: "",
+    route: "/painel",
     searchDevices: "", searchLinks: "",
     deviceSort: { col: "nome", dir: "asc" },
     linkSort: { col: "updatedAt", dir: "desc" },

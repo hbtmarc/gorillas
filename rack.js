@@ -56,6 +56,7 @@ function buildRackElevation(rack) {
   const totalU = rack.totalU || 24;
   const itens = rack.itens || [];
   const devById = new Map(appState.db.dispositivos.map(d => [d.id, d]));
+  const wanById = new Map((appState.db.wans || []).map(w => [w.id, w]));
   // Build occupied map: u -> item that starts at or covers this U
   if (!rack.itens) rack.itens = []; // defensive init
   const occupiedMap = new Map();
@@ -69,7 +70,7 @@ function buildRackElevation(rack) {
     rows += `<div class="rack-u" data-rack-u="${u}">
       <div class="rack-u-label">${u}</div>
       <div class="rack-u-slot" data-slot="${u}">
-        ${item ? renderRackItem(item, devById) : ""}
+        ${item ? renderRackItem(item, devById, wanById) : ""}
         ${!occupied && !item ? `<div class="rack-drop-zone" data-drop-u="${u}"></div>` : ""}
       </div>
     </div>`;
@@ -85,11 +86,18 @@ function buildRackElevation(rack) {
   </div>`;
 }
 
-function renderRackItem(item, devById) {
+function renderRackItem(item, devById, wanById) {
   const h = item.altU * 28;
   let color = '#94a3b8', label = item.nome || '';
   const rit = RACK_ITEM_TYPES.find(t => t.key === item.tipo);
   if (rit) color = rit.color;
+  if (item.tipo === 'wan') {
+    color = '#ef4444';
+    if (item.wanId) {
+      const wan = wanById?.get(item.wanId);
+      if (wan) label = `WAN · ${wan.nome || wan.isp || 'Link'}`;
+    }
+  }
   if (item.tipo === 'device' && item.dispositivoId) {
     const dev = devById.get(item.dispositivoId);
     if (dev) { label = dev.nome; color = RACK_ITEM_TYPES[0].color }
@@ -152,17 +160,58 @@ function addRackItem(rackId, tipo, posU) {
   }
 
   if (tipo === 'device') {
-    // Show device picker
+    // Show device picker (with WAN-only option)
     const unracked = appState.db.dispositivos.filter(d => !d.rack && (d.alturaU || 1) > 0);
-    if (!unracked.length) { toast('warning', 'Rack', 'Não há dispositivos disponíveis para alocar.'); return }
+    const wanDeviceIdSet = new Set((appState.db.wans || []).map(w => w.dispositivoId).filter(Boolean));
+    const WAN_RECEIVER_TYPES = new Set(['Firewall', 'Roteador', 'Modem ISP']);
+    const unrackedWan = unracked.filter(d => wanDeviceIdSet.has(d.id) || WAN_RECEIVER_TYPES.has(d.tipo));
+    const existingWanIds = new Set((rack.itens || []).map(it => it.wanId).filter(Boolean));
+    const existingDeviceIds = new Set((rack.itens || []).map(it => it.dispositivoId).filter(Boolean));
+    const wanOptions = (appState.db.wans || []).filter(w => !existingWanIds.has(w.id)).map(w => {
+      const dev = appState.db.dispositivos.find(d => d.id === w.dispositivoId);
+      const devName = dev?.nome ? ` · ${dev.nome}` : '';
+      const port = w.porta ? ` · P${w.porta}` : '';
+      return {
+        value: `wan:${w.id}`,
+        label: `WAN · ${w.nome || w.isp || 'Link'}${devName}${port}`
+      };
+    });
+    if (!unracked.length && !wanOptions.length) { toast('warning', 'Rack', 'Não há dispositivos ou WANs disponíveis para alocar.'); return }
     // Small delay to let previous modal close fully
     setTimeout(() => {
       openModal({
         title: 'Alocar dispositivo na posição U' + posU, saveLabel: 'Alocar',
-        body: `<div class="form-group"><label class="form-label">Dispositivo</label><select class="form-select" id="f_rdev">${unracked.map(d => `<option value="${esc(d.id)}">${esc(d.nome)} (${d.alturaU || 1}U)</option>`).join('')}</select></div>`,
+        body: `<div class="form-group"><label class="form-check"><input type="checkbox" id="f_rwanonly"/> Somente WANs (borda: firewall/roteador/modem)</label></div>
+        <div class="form-group"><label class="form-label">Dispositivo</label><select class="form-select" id="f_rdev"></select>
+        <div style="font-size:11px;color:var(--text-secondary);margin-top:4px" id="f_rdev_hint"></div></div>`,
         onSave: () => {
           const devId = $('#f_rdev').value;
+          if (!devId) { toast('warning', 'Rack', 'Selecione um item para alocar.'); return; }
+
+          if (devId.startsWith('wan:')) {
+            const wanId = devId.slice(4);
+            const wan = (appState.db.wans || []).find(w => w.id === wanId);
+            if (!wan) { toast('error', 'Rack', 'WAN não encontrada.'); return; }
+            if ((rack.itens || []).some(it => it.wanId === wan.id)) {
+              toast('warning', 'Rack', 'Esta WAN já foi adicionada no rack.');
+              return;
+            }
+            const item = { tipo: 'wan', posU, altU: 1, nome: `WAN · ${wan.nome || wan.isp || 'Link'}`, dispositivoId: '', wanId: wan.id };
+            if (rack.itens.some(it => posU >= it.posU && posU < it.posU + it.altU)) {
+              toast('error', 'Rack', 'Posição já ocupada.'); return;
+            }
+            pushUndo('Alocar WAN no rack', structuredClone(appState.db));
+            rack.itens.push(item);
+            saveDB(appState.db); closeModal(); render();
+            toast('success', 'Rack', (wan.nome || wan.isp || 'WAN') + ' alocada na U' + posU + '.');
+            return;
+          }
+
           const dev = appState.db.dispositivos.find(d => d.id === devId); if (!dev) return;
+          if (existingDeviceIds.has(dev.id)) {
+            toast('warning', 'Rack', 'Este dispositivo já foi adicionado no rack.');
+            return;
+          }
           const item = { tipo, posU, altU: dev.alturaU || 1, nome: dev.nome, dispositivoId: devId };
           for (let u = posU; u < posU + item.altU; u++) {
             if (u > rack.totalU || rack.itens.some(it => u >= it.posU && u < it.posU + it.altU)) {
@@ -176,6 +225,34 @@ function addRackItem(rackId, tipo, posU) {
           toast('success', 'Rack', dev.nome + ' alocado na U' + posU + '.');
         }
       });
+      setTimeout(() => {
+        const chk = $('#f_rwanonly');
+        const sel = $('#f_rdev');
+        const hint = $('#f_rdev_hint');
+        const renderOptions = (wanOnly) => {
+          const list = wanOnly
+            ? wanOptions.map(w => ({ value: w.value, text: w.label }))
+            : unracked.map(d => {
+              const wanTag = wanDeviceIdSet.has(d.id) ? ' · WAN' : '';
+              return { value: d.id, text: `${d.nome} (${d.alturaU || 1}U${wanTag})` };
+            });
+          sel.innerHTML = list.map(o => `<option value="${esc(o.value)}">${esc(o.text)}</option>`).join('');
+          if (!list.length) {
+            sel.innerHTML = '';
+            hint.textContent = wanOnly
+              ? 'Nenhuma WAN cadastrada para alocar.'
+              : 'Nenhum dispositivo disponível.';
+          } else {
+            hint.textContent = wanOnly
+              ? `${list.length} WAN(s) disponível(is).`
+              : `${list.length} dispositivo(s) disponível(is).`;
+          }
+        };
+        if (chk && sel && hint) {
+          renderOptions(false);
+          chk.addEventListener('change', () => renderOptions(chk.checked));
+        }
+      }, 0);
     }, 100);
     return;
   }
@@ -230,9 +307,11 @@ function openRackItemDetail(rackId, posU) {
   const item = rack.itens.find(it => it.posU === posU); if (!item) return;
   const rit = RACK_ITEM_TYPES.find(t => t.key === item.tipo);
   const devById = new Map(appState.db.dispositivos.map(d => [d.id, d]));
+  const wanById = new Map((appState.db.wans || []).map(w => [w.id, w]));
   const dev = item.dispositivoId ? devById.get(item.dispositivoId) : null;
+  const wan = item.wanId ? wanById.get(item.wanId) : null;
   const label = dev ? dev.nome : item.nome;
-  const tipoLabel = rit ? rit.label : item.tipo;
+  const tipoLabel = item.tipo === 'wan' ? 'WAN' : (rit ? rit.label : item.tipo);
 
   openModal({
     title: 'Detalhes do item', saveLabel: '', hideFooter: true,
@@ -241,6 +320,7 @@ function openRackItemDetail(rackId, posU) {
           <div style="font-size:15px;font-weight:700;margin-bottom:4px">${esc(label)}</div>
           <div style="font-size:12px;color:var(--text-secondary)">${esc(tipoLabel)} · Posição U${posU} · ${item.altU}U de altura</div>
           ${dev ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${esc(dev.tipo || '')}${dev.ip ? ' · ' + esc(dev.ip) : ''}</div>` : ''}
+          ${wan ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${esc(wan.isp || '')}${wan.porta ? ' · Porta ' + esc(wan.porta) : ''}</div>` : ''}
         </div>
         <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px">ℹ️ Arraste o item para mover entre posições.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">

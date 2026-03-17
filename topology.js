@@ -250,7 +250,7 @@ function buildTopoSVG(opts) {
         const active = isSel || isHl;
         const label = d.nome.length > 20 ? d.nome.slice(0, 19) + "…" : d.nome;
         const sub = [d.tipo || "", d.ip || ""].filter(Boolean).join(" · ");
-        const subT = sub.length > 26 ? sub.slice(0, 25) + "…" : sub;
+        const subT = d.ip ? sub : (sub.length > 26 ? sub.slice(0, 25) + "…" : sub);
         const statusColor = d.status === "ativo" ? "#22c55e" : d.status === "inativo" ? "#ef4444" : d.status === "manutenção" ? "#f59e0b" : "#94a3b8";
         return `<g data-node-id="${esc(d.id)}" style="cursor:${appState.topoEditMode ? "grab" : "pointer"}">
       <rect x="${p.x}" y="${p.y}" width="${TOPO.NODE_W}" height="${TOPO.NODE_H}" rx="10" fill="#fff" stroke="${active ? "#006fff" : "#e2e5ea"}" stroke-width="${active ? 2.5 : 1}"${isHl ? ' filter="url(#glowFilter)"' : ""}/>

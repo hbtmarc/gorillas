@@ -1786,6 +1786,34 @@ tr:hover td {
   border-bottom: none
 }
 
+/* ── WAN Port Indicators ── */
+.port-wan-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: 3px;
+  padding: 0 3px;
+  vertical-align: middle;
+  margin-left: 2px;
+  line-height: 15px
+}
+
+.port-card-wan {
+  border-color: #fca5a5 !important;
+  background: linear-gradient(135deg, #fff 60%, #fef2f2 100%) !important
+}
+
+.wan-port-section {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px
+}
+
 @media (max-width: 768px) {
   .port-layout {
     flex-direction: column

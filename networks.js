@@ -37,10 +37,10 @@ function renderWanTab() {
     const dev = devById.get(w.dispositivoId);
     return `<tr>
         <td class="td-name">${esc(w.nome)}</td><td>${esc(w.isp || "—")}</td>
-        <td><span class="badge">${esc(w.tipo)}</span></td><td>${esc(w.ip || "—")}</td>
+        <td><span class="badge">${esc(w.tipo)}</span></td><td>${esc(w.publicIp || w.ip || "—")}</td>
         <td>${esc(w.velocidadeDown || "—")}↓ / ${esc(w.velocidadeUp || "—")}↑</td>
         <td>${w.failover ? '<span class="badge badge-warning">Failover</span>' : w.balanceamento ? '<span class="badge badge-accent">Balanceamento</span>' : "—"}</td>
-        <td>${esc(dev?.nome || "—")}</td>
+        <td>${esc(dev?.nome || "—")}${w.porta ? ' <span class="badge" style="font-size:10px">P' + esc(w.porta) + '</span>' : ''}</td>
         <td class="td-actions"><button class="btn btn-sm btn-ghost" data-action="edit-wan" data-id="${esc(w.id)}">Editar</button><button class="btn btn-sm btn-danger" data-action="del-wan" data-id="${esc(w.id)}">Remover</button></td>
       </tr>`}).join("")}</tbody>
   </table></div>`;
@@ -97,18 +97,26 @@ function renderVlanTab() {
 function openWanForm(existing) {
   const isEdit = !!existing; const w = existing || newWan();
   const devOpts = appState.db.dispositivos.map(d => `<option value="${esc(d.id)}" ${d.id === w.dispositivoId ? "selected" : ""}>${esc(d.nome)}</option>`).join("");
+  // Build port options for the selected device
+  const selDev = w.dispositivoId ? appState.db.dispositivos.find(d => d.id === w.dispositivoId) : null;
+  const portCount = selDev ? parseInt(selDev.portas) || 0 : 0;
+  const portOpts = portCount ? Array.from({length: portCount}, (_, i) => i + 1).map(p => `<option value="${p}" ${String(p) === String(w.porta) ? "selected" : ""}>${p}</option>`).join('') : '';
   openModal({
     title: isEdit ? "Editar WAN" : "Adicionar WAN", saveLabel: isEdit ? "Salvar" : "Adicionar", wide: true,
     body: `<div class="form-grid">
     <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="f_wname" value="${esc(w.nome)}" placeholder="WAN Principal"/></div>
-    <div class="form-group"><label class="form-label">ISP</label><input class="form-input" id="f_wisp" value="${esc(w.isp)}" placeholder="Vivo, Claro, Tim…"/></div>
+    <div class="form-group"><label class="form-label">ISP / Provedor</label><input class="form-input" id="f_wisp" value="${esc(w.isp)}" placeholder="Vivo, Claro, Tim…"/></div>
     <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="f_wtipo">${WAN_TIPOS.map(t => `<option value="${esc(t)}" ${t === w.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
-    <div class="form-group"><label class="form-label">IP externo</label><input class="form-input" id="f_wip" value="${esc(w.ip)}" placeholder="Dinâmico ou fixo"/></div>
+    <div class="form-group"><label class="form-label">IP público</label><input class="form-input" id="f_wpublicip" value="${esc(w.publicIp || '')}" placeholder="200.x.x.x (fixo ou dinâmico)"/></div>
+    <div class="form-group"><label class="form-label">IP interface</label><input class="form-input" id="f_wip" value="${esc(w.ip)}" placeholder="IP na interface WAN"/></div>
     <div class="form-group"><label class="form-label">Gateway</label><input class="form-input" id="f_wgw" value="${esc(w.gateway)}"/></div>
     <div class="form-group"><label class="form-label">DNS</label><input class="form-input" id="f_wdns" value="${esc(w.dns)}" placeholder="8.8.8.8, 1.1.1.1"/></div>
     <div class="form-group"><label class="form-label">Download</label><input class="form-input" id="f_wdown" value="${esc(w.velocidadeDown)}" placeholder="500 Mbps"/></div>
     <div class="form-group"><label class="form-label">Upload</label><input class="form-input" id="f_wup" value="${esc(w.velocidadeUp)}" placeholder="250 Mbps"/></div>
     <div class="form-group"><label class="form-label">Dispositivo (modem/roteador)</label><select class="form-select" id="f_wdev"><option value="">Nenhum</option>${devOpts}</select></div>
+    <div class="form-group"><label class="form-label">Porta no dispositivo</label><select class="form-select" id="f_wporta"><option value="">—</option>${portOpts}</select></div>
+    <div class="form-group"><label class="form-label">Prioridade</label><input class="form-input" id="f_wprior" type="number" min="1" max="99" value="${w.prioridade || 1}" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">1 = primária, 2 = secundária…</div></div>
+    <div class="form-group"><label class="form-label">Peso (balanceamento)</label><input class="form-input" id="f_wpeso" type="number" min="1" max="100" value="${w.peso || 1}" /><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">Proporção no balanceamento</div></div>
     <div class="form-group"><label class="form-check"><input type="checkbox" id="f_wfail" ${w.failover ? "checked" : ""}/> Failover</label></div>
     <div class="form-group"><label class="form-check"><input type="checkbox" id="f_wbal" ${w.balanceamento ? "checked" : ""}/> Balanceamento</label></div>
     <div class="form-group full"><label class="form-label">Observações</label><input class="form-input" id="f_wnotas" value="${esc(w.notas)}"/></div>
@@ -116,12 +124,24 @@ function openWanForm(existing) {
     onSave: () => {
       const nome = $("#f_wname").value.trim(); if (!nome) { toast("error", "Validação", "Informe um nome."); return }
       pushUndo(isEdit ? "Editar WAN" : "Adicionar WAN", structuredClone(appState.db));
-      const p = { ...w, nome, isp: $("#f_wisp").value.trim(), tipo: $("#f_wtipo").value, ip: $("#f_wip").value.trim(), gateway: $("#f_wgw").value.trim(), dns: $("#f_wdns").value.trim(), velocidadeDown: $("#f_wdown").value.trim(), velocidadeUp: $("#f_wup").value.trim(), dispositivoId: $("#f_wdev").value, failover: $("#f_wfail").checked, balanceamento: $("#f_wbal").checked, notas: $("#f_wnotas").value.trim(), updatedAt: nowISO() };
+      const p = { ...w, nome, isp: $("#f_wisp").value.trim(), tipo: $("#f_wtipo").value, ip: $("#f_wip").value.trim(), publicIp: $("#f_wpublicip").value.trim(), gateway: $("#f_wgw").value.trim(), dns: $("#f_wdns").value.trim(), velocidadeDown: $("#f_wdown").value.trim(), velocidadeUp: $("#f_wup").value.trim(), dispositivoId: $("#f_wdev").value, porta: $("#f_wporta").value, prioridade: parseInt($("#f_wprior").value) || 1, peso: parseInt($("#f_wpeso").value) || 1, failover: $("#f_wfail").checked, balanceamento: $("#f_wbal").checked, notas: $("#f_wnotas").value.trim(), updatedAt: nowISO() };
       if (!p.id) p.id = uid(); if (!p.createdAt) p.createdAt = nowISO();
       if (isEdit) { const i = (appState.db.wans || []).findIndex(x => x.id === w.id); if (i >= 0) appState.db.wans[i] = p } else { if (!appState.db.wans) appState.db.wans = []; appState.db.wans.push(p) }
       saveDB(appState.db); closeModal(); toast("success", "WAN", isEdit ? "WAN atualizada." : "WAN adicionada."); render();
     }
   });
+  // Dynamic port options when device changes
+  setTimeout(() => {
+    const devSel = $('#f_wdev');
+    const portSel = $('#f_wporta');
+    if (devSel && portSel) {
+      devSel.addEventListener('change', () => {
+        const dev = appState.db.dispositivos.find(d => d.id === devSel.value);
+        const pc = dev ? parseInt(dev.portas) || 0 : 0;
+        portSel.innerHTML = '<option value="">—</option>' + (pc ? Array.from({length: pc}, (_, i) => i + 1).map(p => `<option value="${p}">${p}</option>`).join('') : '');
+      });
+    }
+  }, 0);
 }
 
 // ───────── CRUD: VPN ─────────
@@ -134,6 +154,13 @@ function openVpnForm(existing) {
     <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="f_vname" value="${esc(v.nome)}" placeholder="VPN Matriz-Filial"/></div>
     <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="f_vtipo">${VPN_TIPOS.map(t => `<option value="${esc(t)}" ${t === v.tipo ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
     <div class="form-group"><label class="form-label">Endpoint</label><input class="form-input" id="f_vep" value="${esc(v.endpoint)}" placeholder="IP ou domínio"/></div>
+    <div class="form-group"><label class="form-label">Chave pré-compartilhada (PSK)</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="form-input" id="f_vpsk" data-secret-input="1" value="${esc(v.psk || "")}" type="password" style="flex:1"/>
+        <button class="btn btn-sm" type="button" data-secret-toggle="f_vpsk">Mostrar</button>
+        <button class="btn btn-sm" type="button" data-secret-copy="f_vpsk">Copiar</button>
+      </div>
+    </div>
     <div class="form-group full"><label class="form-label">Dispositivos</label><div id="f_vdevs" style="max-height:120px;overflow-y:auto">${devChecks || "<span style='color:var(--text-tertiary);font-size:12px'>Nenhum dispositivo</span>"}</div></div>
     <div class="form-group full"><label class="form-label">Observações</label><input class="form-input" id="f_vnotas" value="${esc(v.notas)}"/></div>
   </div>`,
@@ -141,7 +168,7 @@ function openVpnForm(existing) {
       const nome = $("#f_vname").value.trim(); if (!nome) { toast("error", "Validação", "Informe um nome."); return }
       pushUndo(isEdit ? "Editar VPN" : "Adicionar VPN", structuredClone(appState.db));
       const devIds = [...$$('#f_vdevs input[type="checkbox"]:checked')].map(c => c.value);
-      const p = { ...v, nome, tipo: $("#f_vtipo").value, endpoint: $("#f_vep").value.trim(), dispositivoIds: devIds, notas: $("#f_vnotas").value.trim(), updatedAt: nowISO() };
+      const p = { ...v, nome, tipo: $("#f_vtipo").value, endpoint: $("#f_vep").value.trim(), psk: $("#f_vpsk").value, dispositivoIds: devIds, notas: $("#f_vnotas").value.trim(), updatedAt: nowISO() };
       if (!p.id) p.id = uid(); if (!p.createdAt) p.createdAt = nowISO();
       if (isEdit) { const i = (appState.db.vpns || []).findIndex(x => x.id === v.id); if (i >= 0) appState.db.vpns[i] = p } else { if (!appState.db.vpns) appState.db.vpns = []; appState.db.vpns.push(p) }
       saveDB(appState.db); closeModal(); toast("success", "VPN", isEdit ? "VPN atualizada." : "VPN adicionada."); render();
@@ -161,7 +188,13 @@ function openWifiForm(existing) {
     <div class="form-group"><label class="form-label">Banda</label><select class="form-select" id="f_wfbanda">${WIFI_BANDAS.map(b => `<option value="${esc(b)}" ${b === w.banda ? "selected" : ""}>${esc(b)}</option>`).join("")}</select></div>
     <div class="form-group"><label class="form-label">Segurança</label><select class="form-select" id="f_wfseg">${WIFI_SEGURANCA.map(s => `<option value="${esc(s)}" ${s === w.seguranca ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></div>
     <div class="form-group"><label class="form-label">VLAN Tag</label><input class="form-input" id="f_wfvlan" value="${esc(w.vlanTag)}" placeholder="10, 20…"/></div>
-    <div class="form-group"><label class="form-label">Senha</label><input class="form-input" id="f_wfsenha" value="${esc(w.senha)}" type="password"/></div>
+    <div class="form-group"><label class="form-label">Senha</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="form-input" id="f_wfsenha" data-secret-input="1" value="${esc(w.senha)}" type="password" style="flex:1"/>
+        <button class="btn btn-sm" type="button" data-secret-toggle="f_wfsenha">Mostrar</button>
+        <button class="btn btn-sm" type="button" data-secret-copy="f_wfsenha">Copiar</button>
+      </div>
+    </div>
     <div class="form-group"><label class="form-check"><input type="checkbox" id="f_wfhidden" ${w.oculta ? "checked" : ""}/> Rede oculta</label></div>
     <div class="form-group full"><label class="form-label">Access Points / Roteadores</label><div id="f_wfaps" style="max-height:120px;overflow-y:auto">${apChecks || "<span style='color:var(--text-tertiary);font-size:12px'>Nenhum AP cadastrado</span>"}</div></div>
     <div class="form-group full"><label class="form-label">Observações</label><input class="form-input" id="f_wfnotas" value="${esc(w.notas)}"/></div>

@@ -197,12 +197,13 @@ function buildPortGrid(mapping, switchDev) {
   return `<div class="port-grid">${mapping.map(p => {
     const status = p.connections.length > 1 ? 'conflict' : p.connections.length === 1 ? 'used' : 'free';
     const conn = p.connections[0];
-    return `<div class="port-card port-card-${status}" data-port-num="${p.port}" data-switch-id="${esc(switchDev.id)}" title="Porta ${p.label}">
-      <div class="port-card-num">${esc(p.label)}</div>
+    const portWan = findWanOnPort(switchDev.id, p.port);
+    return `<div class="port-card port-card-${status}${portWan ? ' port-card-wan' : ''}" data-port-num="${p.port}" data-switch-id="${esc(switchDev.id)}" title="Porta ${p.label}${portWan ? ' (WAN)' : ''}">
+      <div class="port-card-num">${esc(p.label)}${portWan ? ' <span class="port-wan-badge">WAN</span>' : ''}</div>
       ${conn ? `
         <div class="port-card-dev">${esc(conn.deviceName)}</div>
         <div class="port-card-meta">${esc(conn.tipo)}${conn.vlan ? ' · VLAN ' + esc(conn.vlan) : ''}</div>
-      ` : `<div class="port-card-dev port-card-free-label">Livre</div>`}
+      ` : portWan ? `<div class="port-card-dev" style="color:#dc2626">${esc(portWan.nome || portWan.isp || 'WAN')}</div>` : `<div class="port-card-dev port-card-free-label">Livre</div>`}
       ${p.connections.length > 1 ? `<div class="port-card-conflict-text">⚠ ${p.connections.length} conexões</div>` : ''}
     </div>`;
   }).join('')}</div>`;
@@ -218,13 +219,14 @@ function buildPortTable(mapping, switchDev) {
     <tbody>${mapping.map(p => {
       const status = p.connections.length > 1 ? 'conflict' : p.connections.length === 1 ? 'used' : 'free';
       const conn = p.connections[0];
+      const portWan = findWanOnPort(switchDev.id, p.port);
       const statusBadge = status === 'conflict'
         ? '<span class="badge badge-danger">Conflito</span>'
         : status === 'used'
         ? '<span class="badge badge-success">Ocupada</span>'
         : '<span class="badge">Livre</span>';
       return `<tr>
-        <td style="font-weight:600">${esc(p.label)}</td>
+        <td style="font-weight:600">${esc(p.label)}${portWan ? ' <span class="port-wan-badge">WAN</span>' : ''}</td>
         <td>${statusBadge}</td>
         <td>${conn ? `<span class="td-name">${esc(conn.deviceName)}</span>` : '—'}</td>
         <td>${conn ? `<span class="badge">${esc(conn.tipo)}</span>` : '—'}</td>
@@ -315,6 +317,89 @@ function showUnassignedConnections(switchDev) {
   });
 }
 
+// ───────── WAN-Port helpers ─────────
+function findWanOnPort(deviceId, portNum) {
+  return (appState.db.wans || []).find(w => w.dispositivoId === deviceId && String(w.porta) === String(portNum));
+}
+function isWanCapableDevice(dev) {
+  return dev && (dev.tipo === 'Roteador' || dev.tipo === 'Firewall');
+}
+function buildWanPortSection(switchDev, portNum) {
+  if (!isWanCapableDevice(switchDev)) return '';
+  const wan = findWanOnPort(switchDev.id, portNum);
+  const wans = appState.db.wans || [];
+  const wanOpts = wans.map(w => `<option value="${esc(w.id)}" ${wan && wan.id === w.id ? 'selected' : ''}>${esc(w.nome || w.isp || 'WAN ' + w.id.slice(0,6))}</option>`).join('');
+  return `
+  <div class="wan-port-section">
+    <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Função da porta</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <select class="form-select" id="portFuncSel" style="width:120px">
+        <option value="LAN" ${!wan ? 'selected' : ''}>LAN</option>
+        <option value="WAN" ${wan ? 'selected' : ''}>WAN</option>
+      </select>
+    </div>
+    <div id="portWanFields" style="display:${wan ? 'block' : 'none'}">
+      <div class="form-grid" style="margin-top:8px">
+        <div class="form-group"><label class="form-label">WAN associada</label>
+          <select class="form-select" id="portWanSel"><option value="">Nenhuma</option>${wanOpts}</select>
+        </div>
+        <div class="form-group"><label class="form-label">Prioridade</label>
+          <input class="form-input" id="portWanPrior" type="number" min="1" max="99" value="${wan ? (wan.prioridade || 1) : 1}" />
+          <div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">1 = primária</div>
+        </div>
+        <div class="form-group"><label class="form-label">Peso</label>
+          <input class="form-input" id="portWanPeso" type="number" min="1" max="100" value="${wan ? (wan.peso || 1) : 1}" />
+          <div style="font-size:10px;color:var(--text-tertiary);margin-top:2px">Balanceamento</div>
+        </div>
+      </div>
+      ${wan ? `<div style="margin-top:4px;font-size:11px;color:var(--text-secondary)">🌐 ${esc(wan.nome || '')} · ${esc(wan.isp || '')} · ${esc(wan.publicIp || wan.ip || '')}</div>` : ''}
+    </div>
+  </div>`;
+}
+function bindWanPortEvents(switchDev, portNum) {
+  const funcSel = $('#portFuncSel');
+  const wanFields = $('#portWanFields');
+  if (!funcSel || !wanFields) return;
+  funcSel.addEventListener('change', () => {
+    wanFields.style.display = funcSel.value === 'WAN' ? 'block' : 'none';
+  });
+}
+function saveWanPortBinding(switchDev, portNum) {
+  const funcSel = $('#portFuncSel');
+  if (!funcSel || !isWanCapableDevice(switchDev)) return;
+  const prevWan = findWanOnPort(switchDev.id, portNum);
+
+  if (funcSel.value === 'LAN') {
+    // Remove WAN binding from this port
+    if (prevWan) {
+      prevWan.porta = '';
+      prevWan.updatedAt = nowISO();
+    }
+    return;
+  }
+  // WAN mode
+  const wanId = $('#portWanSel')?.value;
+  const prior = parseInt($('#portWanPrior')?.value) || 1;
+  const peso = parseInt($('#portWanPeso')?.value) || 1;
+
+  // Clear previous WAN on this port if different
+  if (prevWan && prevWan.id !== wanId) {
+    prevWan.porta = '';
+    prevWan.updatedAt = nowISO();
+  }
+  // Set new WAN binding
+  if (wanId) {
+    const wan = (appState.db.wans || []).find(w => w.id === wanId);
+    if (wan) {
+      wan.dispositivoId = switchDev.id;
+      wan.porta = String(portNum);
+      wan.prioridade = prior;
+      wan.peso = peso;
+      wan.updatedAt = nowISO();
+    }
+  }
+}
+
 // ───────── Port Detail Modal ─────────
 function openPortDetail(switchDev, portNum) {
   const links = appState.db.conexoes;
@@ -324,6 +409,7 @@ function openPortDetail(switchDev, portNum) {
   if (!port) return;
 
   const devById = new Map(devs.map(d => [d.id, d]));
+  const wanSection = buildWanPortSection(switchDev, portNum);
 
   if (port.connections.length === 0) {
     // Free port — offer to create/assign connection
@@ -349,27 +435,33 @@ function openPortDetail(switchDev, portNum) {
       body: `<div style="text-align:center;padding:16px 0"><div style="font-size:40px;margin-bottom:8px">🔌</div>
         <div style="font-size:15px;font-weight:600;color:var(--text-secondary)">Porta livre</div>
       </div>
+      ${wanSection}
       ${assignHTML}
       <div style="margin-top:12px;text-align:center">
         <button class="btn btn-sm" id="portNewConn">Nova conexão nesta porta</button>
       </div>`,
       onSave: () => {
-        const sel = $('#portAssignLink');
-        if (!sel || !sel.value) { closeModal(); return; }
-        const linkId = sel.value;
-        const side = sel.selectedOptions[0]?.dataset.side;
-        const link = appState.db.conexoes.find(x => x.id === linkId);
-        if (!link) { closeModal(); return; }
         pushUndo('Atribuir porta', structuredClone(appState.db));
-        if (side === 'de') link.portaDe = String(portNum);
-        else link.portaPara = String(portNum);
-        link.updatedAt = nowISO();
+        // Save WAN binding if applicable
+        saveWanPortBinding(switchDev, portNum);
+        const sel = $('#portAssignLink');
+        if (sel && sel.value) {
+          const linkId = sel.value;
+          const side = sel.selectedOptions[0]?.dataset.side;
+          const link = appState.db.conexoes.find(x => x.id === linkId);
+          if (link) {
+            if (side === 'de') link.portaDe = String(portNum);
+            else link.portaPara = String(portNum);
+            link.updatedAt = nowISO();
+          }
+        }
         saveDB(appState.db);
-        toast('success', 'Porta', `Porta ${portNum} atribuída.`);
+        toast('success', 'Porta', `Porta ${portNum} atualizada.`);
         closeModal(); render();
       }
     });
     setTimeout(() => {
+      bindWanPortEvents(switchDev, portNum);
       $('#portNewConn')?.addEventListener('click', () => {
         closeModal();
         setTimeout(() => {
@@ -419,13 +511,22 @@ function openPortDetail(switchDev, portNum) {
 
   openModal({
     title: `Porta ${portNum} — ${switchDev.nome}`,
-    saveLabel: '', hideFooter: true, wide: true,
+    saveLabel: wanSection ? 'Salvar' : '', hideFooter: !wanSection, wide: true,
     body: `<div style="margin-bottom:16px">${statusLabel}</div>${connHTML}
+    ${wanSection ? `<hr class="divider"/>${wanSection}` : ''}
     <div style="margin-top:16px;border-top:1px solid var(--border-light);padding-top:12px">
       <button class="btn btn-sm" id="portDetailClose">Fechar</button>
-    </div>`
+    </div>`,
+    onSave: wanSection ? () => {
+      pushUndo('Função da porta', structuredClone(appState.db));
+      saveWanPortBinding(switchDev, portNum);
+      saveDB(appState.db);
+      toast('success', 'Porta', `Porta ${portNum} atualizada.`);
+      closeModal(); render();
+    } : null
   });
   setTimeout(() => {
+    bindWanPortEvents(switchDev, portNum);
     $('#portDetailClose')?.addEventListener('click', closeModal);
     $$('#modalBody [data-port-modal-action]').forEach(btn => {
       btn.addEventListener('click', () => {

@@ -1,5 +1,5 @@
 /* ============================================================
-   Gorillas — Data Model v2
+    Gorillas — Data Model v2
    Schema, migration, defaults, expanded device properties
    ============================================================ */
 
@@ -13,7 +13,7 @@ const DEVICE_DEFAULTS = {
     createdAt: "", updatedAt: ""
 };
 
-const WAN_DEFAULTS = { id: "", nome: "", isp: "", tipo: "Fibra", ip: "", gateway: "", dns: "", velocidadeDown: "", velocidadeUp: "", failover: false, balanceamento: false, dispositivoId: "", notas: "", createdAt: "", updatedAt: "" };
+const WAN_DEFAULTS = { id: "", nome: "", isp: "", tipo: "Fibra", ip: "", gateway: "", dns: "", velocidadeDown: "", velocidadeUp: "", failover: false, balanceamento: false, dispositivoId: "", publicIp: "", prioridade: 1, peso: 1, porta: "", notas: "", createdAt: "", updatedAt: "" };
 
 const VPN_DEFAULTS = { id: "", nome: "", tipo: "Site-to-Site", endpoint: "", psk: "", dispositivoIds: [], notas: "", createdAt: "", updatedAt: "" };
 
@@ -75,10 +75,14 @@ function migrateDB(db) {
     if (!db.meta) db.meta = { app: "GorillasNet", version: 2, createdAt: nowISO(), updatedAt: nowISO() };
 
     if (v < 2) {
-        // Migrate devices: add new fields with defaults
         db.dispositivos = db.dispositivos.map(d => ({ ...DEVICE_DEFAULTS, ...d }));
         db.meta.version = 2;
         console.log("DB migrated to v2");
+    }
+    if (v < 3) {
+        db.wans = (db.wans || []).map(w => ({ ...WAN_DEFAULTS, ...w }));
+        db.meta.version = 3;
+        console.log("DB migrated to v3");
     }
     return db;
 }

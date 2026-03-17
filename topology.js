@@ -178,6 +178,7 @@ function buildTopoSVG(opts) {
             const cy = devPos ? (devPos.y - 70) : (TOPO.PAD - 30);
             const label = w.nome || w.isp || 'WAN';
             const subLabel = [w.isp, w.velocidadeDown ? w.velocidadeDown + '↓' : ''].filter(Boolean).join(' · ');
+            const portaLabel = w.porta ? 'P' + w.porta : '';
             extraPts.push({ x: cx - 64, y: cy - 26 }, { x: cx + 64, y: cy + 26 });
             wanHTML += `<g class="topo-wan" data-wan-id="${esc(w.id)}">
           <ellipse cx="${cx}" cy="${cy}" rx="62" ry="24" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 3" opacity=".85"/>
@@ -186,7 +187,14 @@ function buildTopoSVG(opts) {
         </g>`;
             // Link from cloud to device
             if (devPos) {
-                wanHTML += `<line x1="${cx}" y1="${cy + 24}" x2="${devPos.x + TOPO.NODE_W / 2}" y2="${devPos.y}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 3" opacity=".5"/>`;
+                const lx1 = cx, ly1 = cy + 24;
+                const lx2 = devPos.x + TOPO.NODE_W / 2, ly2 = devPos.y;
+                wanHTML += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 3" opacity=".5"/>`;
+                if (portaLabel) {
+                    const mx = (lx1 + lx2) / 2, my = (ly1 + ly2) / 2;
+                    wanHTML += `<rect x="${mx - 10}" y="${my - 7}" width="20" height="12" rx="3" fill="#fef2f2" stroke="#fca5a5" stroke-width=".5" opacity=".9"/>`;
+                    wanHTML += `<text x="${mx}" y="${my + 3}" text-anchor="middle" font-size="8" font-weight="600" fill="#dc2626" font-family="Inter,sans-serif">${esc(portaLabel)}</text>`;
+                }
             }
             if (!devPos) freeWanIdx++;
         });

@@ -173,6 +173,22 @@ function openDeviceDetail(device) {
   }).join("")}
     </div>` : "";
 
+  // WAN Interfaces section for routers/firewalls
+  const devWans = (appState.db.wans || []).filter(w => w.dispositivoId === d.id);
+  const wanHTML = devWans.length ? `
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Interfaces WAN (${devWans.length})</div>
+      ${devWans.map(w => `<div class="detail-conn-row" style="display:flex;align-items:center;gap:8px">
+        <span style="color:#dc2626">🌐</span>
+        <span style="font-weight:600">${esc(w.nome || 'WAN')}</span>
+        <span class="badge" style="font-size:10px">${esc(w.isp || w.tipo || '')}</span>
+        ${w.porta ? `<span class="badge" style="font-size:10px">Porta ${esc(w.porta)}</span>` : ''}
+        ${w.publicIp ? `<span style="font-size:11px;color:var(--text-secondary)">${esc(w.publicIp)}</span>` : ''}
+        ${w.failover ? '<span class="badge badge-warning" style="font-size:9px">Failover</span>' : ''}
+        ${w.balanceamento ? '<span class="badge badge-accent" style="font-size:9px">Balanceamento</span>' : ''}
+      </div>`).join("")}
+    </div>` : "";
+
   openModal({
     title: "Detalhes do dispositivo", saveLabel: "", hideFooter: true, wide: true,
     body: `
@@ -188,6 +204,7 @@ function openDeviceDetail(device) {
       ${fields.map(([k, v]) => `<div class="detail-grid-item"><div class="detail-grid-label">${esc(k)}</div><div class="detail-grid-value">${esc(v)}</div></div>`).join("")}
     </div>
     ${connHTML}
+    ${wanHTML}
     <div style="margin-top:20px;display:flex;gap:8px;border-top:1px solid var(--border-light);padding-top:16px">
       <button class="btn btn-primary" type="button" id="detailEdit">Editar</button>
       <button class="btn" type="button" id="detailTopoView">Ver na topologia</button>
@@ -215,6 +232,11 @@ function pageConexoes() {
   });
   list = sortList(list, appState.linkSort.col, appState.linkSort.dir);
   const tiposLink = uniqueValues(appState.db.conexoes, "tipo");
+  // Build WAN-by-device:port lookup for connection annotations
+  const wanByDevPort = new Map();
+  (appState.db.wans || []).forEach(w => {
+    if (w.dispositivoId && w.porta) wanByDevPort.set(w.dispositivoId + ':' + w.porta, w);
+  });
   const sortIcon = (col) => { const s = appState.linkSort; return `<span class="sort-icon">${s.col === col ? (s.dir === "asc" ? "▲" : "▼") : "⇅"}</span>` };
   return `
   <div class="card">
@@ -244,9 +266,12 @@ function pageConexoes() {
       <tbody>${list.map(l => {
         const de = devById.get(l.deId)?.nome || "(removido)";
         const para = devById.get(l.paraId)?.nome || "(removido)";
+        const wDe = wanByDevPort.get(l.deId + ':' + l.portaDe);
+        const wPa = wanByDevPort.get(l.paraId + ':' + l.portaPara);
+        const wanBadge = wDe || wPa ? ` <span class="badge" style="font-size:9px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5">🌐 ${esc((wDe || wPa).nome || 'WAN')}</span>` : '';
         return `<tr>
         <td class="td-name">${esc(de)}</td><td class="td-name">${esc(para)}</td>
-        <td><span class="badge">${esc(l.tipo || "—")}</span></td>
+        <td><span class="badge">${esc(l.tipo || "—")}</span>${wanBadge}</td>
         <td>${esc(l.vlan || "—")}</td>
         <td>${esc(l.portaDe || "—")} → ${esc(l.portaPara || "—")}</td>
         <td>${esc(l.velocidade || "—")}</td>

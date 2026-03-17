@@ -30,21 +30,30 @@ function loadCache() {
     return migrateDB(p);
 }
 function saveCache(db) { localStorage.setItem(DB_KEY, JSON.stringify(db)) }
-function saveDB(db) {
+function saveDB(db, collection) {
     db.meta.updatedAt = nowISO(); saveCache(db);
-    dbRef.set(db).catch(e => { console.error("save error", e); toast("error", "Erro", "Falha ao salvar.") });
+    if (typeof SyncEngine !== 'undefined') {
+        SyncEngine.enqueue(collection || 'data', '', 'update').catch(() => {});
+        SyncEngine.pushIfOnline(db);
+    } else {
+        dbRef.set(db).catch(e => console.warn('[sync] push deferred:', e.message));
+    }
 }
 function initFirebase() {
     rtdb.ref(".info/connected").on("value", s => { firebaseConnected = !!s.val(); updateSyncDot() });
     dbRef.on("value", s => {
         const d = s.val();
         if (d && typeof d === "object") {
-            const migrated = migrateDB(d);
-            appState.db = migrated; saveCache(migrated); render();
+            if (typeof SyncEngine !== 'undefined') {
+                SyncEngine.handleRemoteUpdate(d);
+            } else {
+                const migrated = migrateDB(d);
+                appState.db = migrated; saveCache(migrated); render();
+            }
         } else {
             const init = loadCache(); dbRef.set(init).catch(e => console.error(e));
         }
-    }, e => { console.error("listener error", e); toast("error", "Erro", "Problema na sincronização.") });
+    }, e => { console.error("listener error", e); });
 }
 function updateSyncDot() {
     const dot = $("#syncDot"); if (!dot) return;
@@ -76,7 +85,59 @@ function toast(kind, title, msg) {
 }
 
 // ───────── Modal ─────────
-const modal = { open: false, lastFocus: null, onSave: null };
+const modal = { open: false, lastFocus: null, onSave: null, secretTimer: null };
+function resetSecretFields() {
+    const body = $("#modalBody");
+    if (!body) return;
+    $$('[data-secret-input]', body).forEach(input => {
+        input.type = "password";
+        const toggle = $(`[data-secret-toggle="${input.id}"]`, body);
+        if (toggle) toggle.textContent = "Mostrar";
+    });
+}
+function bindSecretFields() {
+    const body = $("#modalBody");
+    if (!body) return;
+    const secretInputs = $$('[data-secret-input]', body);
+    if (modal.secretTimer) { clearTimeout(modal.secretTimer); modal.secretTimer = null; }
+    if (!secretInputs.length) return;
+
+    secretInputs.forEach(input => {
+        input.type = "password";
+        const toggle = $(`[data-secret-toggle="${input.id}"]`, body);
+        const copyBtn = $(`[data-secret-copy="${input.id}"]`, body);
+
+        if (toggle) {
+            toggle.textContent = "Mostrar";
+            toggle.onclick = () => {
+                const showing = input.type === "text";
+                input.type = showing ? "password" : "text";
+                toggle.textContent = showing ? "Mostrar" : "Ocultar";
+            };
+        }
+
+        if (copyBtn) {
+            copyBtn.onclick = async () => {
+                try {
+                    if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(input.value || "");
+                    } else {
+                        input.select();
+                        document.execCommand("copy");
+                    }
+                    toast("success", "Copiado", "");
+                } catch {
+                    toast("error", "Erro", "Não foi possível copiar.");
+                }
+            };
+        }
+    });
+
+    modal.secretTimer = setTimeout(() => {
+        resetSecretFields();
+        modal.secretTimer = null;
+    }, 15000);
+}
 function openModal({ title, body, onSave, saveLabel = "Salvar", saveClass = "btn-primary", hideFooter = false, wide = false }) {
     modal.open = true; modal.onSave = onSave; modal.lastFocus = document.activeElement;
     $("#modalTitle").textContent = title || "";
@@ -88,12 +149,15 @@ function openModal({ title, body, onSave, saveLabel = "Salvar", saveClass = "btn
     const ov = $("#modalOverlay"); ov.classList.add("open"); ov.setAttribute("aria-hidden", "false");
     const fi = $("#modalBody input,#modalBody select,#modalBody textarea");
     (fi || $("#modalSave")).focus();
+    bindSecretFields();
     document.addEventListener("keydown", onModalKey, true);
 }
 function closeModal() {
     modal.open = false; modal.onSave = null;
     const ov = $("#modalOverlay"); ov.classList.remove("open"); ov.setAttribute("aria-hidden", "true");
     document.removeEventListener("keydown", onModalKey, true);
+    if (modal.secretTimer) { clearTimeout(modal.secretTimer); modal.secretTimer = null; }
+    resetSecretFields();
     if (modal.lastFocus?.focus) modal.lastFocus.focus();
 }
 function onModalKey(e) {

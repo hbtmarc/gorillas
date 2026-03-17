@@ -22,8 +22,8 @@ function render() {
     else if (appState.route === "/configuracoes") html = pageConfiguracoes();
     else html = `<div class="card"><div class="card-header"><div><h2 class="card-title">Página não encontrada</h2></div></div><button class="btn" type="button" id="goHome">Voltar ao painel</button></div>`;
 
-    // Topology uses wide layout
-    if (appState.route === "/topologia" || appState.route === "/racks") { view.classList.add("wide") } else { view.classList.remove("wide") }
+    // Wide layout for topology, racks, ports
+    if (appState.route === "/topologia" || appState.route === "/racks" || appState.route === "/portas") { view.classList.add("wide") } else { view.classList.remove("wide") }
 
     view.innerHTML = html;
     updateSyncDot();
@@ -176,3 +176,4 @@ if (!location.hash) location.hash = "#/painel";
 appState.db = loadCache();
 render();
 initFirebase();
+if (typeof SyncEngine !== 'undefined') SyncEngine.init();

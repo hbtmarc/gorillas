@@ -94,7 +94,7 @@ function renderRackItem(item, devById) {
     const dev = devById.get(item.dispositivoId);
     if (dev) { label = dev.nome; color = RACK_ITEM_TYPES[0].color }
   }
-  return `<div class="rack-item" style="height:${h}px;background:${color};top:0" data-rackitem-pos="${item.posU}" data-rackitem-altu="${item.altU}" draggable="true" title="${esc(label)}">
+  return `<div class="rack-item" style="height:${h}px;background:${color};bottom:0" data-rackitem-pos="${item.posU}" data-rackitem-altu="${item.altU}" draggable="true" title="${esc(label)}">
     <span class="rack-item-grip">⠿</span> ${esc(label)}
   </div>`;
 }

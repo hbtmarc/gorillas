@@ -17,6 +17,8 @@ function render() {
     else if (appState.route === "/topologia") html = pageTopologia();
     else if (appState.route === "/redes") html = pageRedes();
     else if (appState.route === "/racks") html = pageRacks();
+    else if (appState.route === "/portas") html = pagePortas();
+    else if (appState.route === "/relatorios") html = pageRelatorios();
     else if (appState.route === "/configuracoes") html = pageConfiguracoes();
     else html = `<div class="card"><div class="card-header"><div><h2 class="card-title">Página não encontrada</h2></div></div><button class="btn" type="button" id="goHome">Voltar ao painel</button></div>`;
 
@@ -31,8 +33,10 @@ function render() {
     if (appState.route === "/configuracoes") loadBackupList();
     if (appState.route === "/topologia") renderTopo();
     if (appState.route === "/racks") bindRackEvents();
+    if (appState.route === "/portas") bindPortEvents();
     if (appState.route === "/redes") bindNetworkEvents();
     if (appState.route === "/painel") renderDashTopo();
+    if (appState.route === "/relatorios") bindReportEvents();
 
     // Hide inspector on non-topology pages
     if (appState.route !== "/topologia") { hideInspector(); appState.topoSelected = null }
@@ -108,8 +112,10 @@ function bindEvents() {
         if (action === "detail-dev") { const d = appState.db.dispositivos.find(x => x.id === id); if (d) openDeviceDetail(d) }
         if (action === "edit-dev") { const d = appState.db.dispositivos.find(x => x.id === id); if (d) openDeviceForm(d) }
         if (action === "del-dev") deleteDevice(id);
+        if (action === "print-dev") printSingleDevice(id);
         if (action === "edit-link") { const l = appState.db.conexoes.find(x => x.id === id); if (l) openLinkForm(l) }
         if (action === "del-link") deleteLink(id);
+        if (action === "print-link") printSingleConnection(id);
         if (action === "topo-link") navigateToTopoLink(id);
         if (action === "restore-backup") {
             openModal({

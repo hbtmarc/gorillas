@@ -191,12 +191,14 @@ function openDeviceDetail(device) {
     <div style="margin-top:20px;display:flex;gap:8px;border-top:1px solid var(--border-light);padding-top:16px">
       <button class="btn btn-primary" type="button" id="detailEdit">Editar</button>
       <button class="btn" type="button" id="detailTopoView">Ver na topologia</button>
+      <button class="btn" type="button" id="detailPrint">Imprimir detalhes</button>
       <button class="btn" type="button" id="detailClose" style="margin-left:auto">Fechar</button>
     </div>`
   });
   setTimeout(() => {
     $("#detailEdit")?.addEventListener("click", () => { closeModal(); openDeviceForm(d) });
     $("#detailTopoView")?.addEventListener("click", () => { closeModal(); navigateToTopoDevice(d.id) });
+    $("#detailPrint")?.addEventListener("click", () => { closeModal(); printSingleDevice(d.id) });
     $("#detailClose")?.addEventListener("click", closeModal);
   }, 0);
 }
@@ -251,6 +253,7 @@ function pageConexoes() {
         <td>${esc(fmtDate(l.updatedAt))}</td>
         <td class="td-actions">
           <button class="btn btn-sm btn-ghost" data-action="topo-link" data-id="${esc(l.id)}" title="Ver na topologia">🗺️</button>
+          <button class="btn btn-sm btn-ghost" data-action="print-link" data-id="${esc(l.id)}" title="Imprimir esta conexão">🖨️</button>
           <button class="btn btn-sm btn-ghost" data-action="edit-link" data-id="${esc(l.id)}">Editar</button>
           <button class="btn btn-sm btn-danger" data-action="del-link" data-id="${esc(l.id)}">Remover</button>
         </td>

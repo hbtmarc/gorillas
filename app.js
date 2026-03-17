@@ -169,6 +169,10 @@ const appState = {
     topoHighlight: null, // {linkId,deId,paraId} — from Conexões "Ver na topologia"
     // rack
     selectedRack: null,
+    // ports
+    selectedSwitch: null,
+    portViewMode: 'grid',
+    portFilter: 'todos',
     // networks tab
     netTab: "wans",
 };

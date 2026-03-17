@@ -91,9 +91,13 @@ function bindEvents() {
     $("#cfgBackupExport")?.addEventListener("click", async () => { const j = await Backups.exportAll(); downloadJSON(j, "inframap-backups.json"); toast("success", "Backups", "Backups exportados.") });
     $("#cfgBackupImport")?.addEventListener("click", () => $("#fileImportBackups").click());
 
-    // Undo button
-    $("#btnUndo")?.addEventListener("click", performUndo);
-    $("#btnUnitsPage")?.addEventListener("click", () => navigate("/unidades"));
+    // Undo / unidades buttons
+    const goUnits = () => { navigate("/unidades"); $("#topbarMore")?.removeAttribute("open") };
+    const doUndo = () => { performUndo(); $("#topbarMore")?.removeAttribute("open") };
+    $("#btnUndo")?.addEventListener("click", doUndo);
+    $("#btnUndoMenu")?.addEventListener("click", doUndo);
+    $("#btnUnitsPage")?.addEventListener("click", goUnits);
+    $("#btnUnitsPageMenu")?.addEventListener("click", goUnits);
     $("#unitSelect")?.addEventListener("change", e => setActiveUnidade(e.target.value));
 
     // Table sort - Dispositivos

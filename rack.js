@@ -397,12 +397,14 @@ function bindRackEvents() {
       e.dataTransfer.setData('rackMoveFrom', String(dragFromU));
       e.dataTransfer.effectAllowed = 'move';
       el.classList.add('rack-item-dragging');
+      document.body.classList.add('rack-dragging-body');
       setTimeout(() => elev.classList.add('rack-dragging'), 0);
     });
     el.addEventListener('dragend', () => {
       el.classList.remove('rack-item-dragging');
       elev.classList.remove('rack-dragging');
       clearAllDropHighlights();
+      document.body.classList.remove('rack-dragging-body');
       dragFromU = null;
     });
   });

@@ -347,20 +347,69 @@ const appState = {
 };
 
 // ───────── Sidebar mobile ─────────
+let sidebarLastFocus = null;
+function focusableIn(el) {
+    if (!el) return [];
+    return $$('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])', el)
+        .filter(node => node.offsetParent !== null);
+}
+function onSidebarKeydown(e) {
+    const sb = $("#sidebar");
+    if (!sb?.classList.contains("open")) return;
+    if (e.key === "Escape") {
+        e.preventDefault();
+        toggleSidebar(false);
+        return;
+    }
+    if (e.key !== "Tab") return;
+    const items = focusableIn(sb);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
+}
 function toggleSidebar(open) {
     const sb = $("#sidebar"), bd = $("#sidebarBackdrop");
+    if (!sb || !bd) return;
     const isOpen = sb.classList.contains("open");
     const next = typeof open === "boolean" ? open : !isOpen;
-    sb.classList.toggle("open", next); bd.classList.toggle("open", next);
+    sb.classList.toggle("open", next);
+    bd.classList.toggle("open", next);
+    const mobileDrawer = window.matchMedia("(max-width: 860px)").matches;
+    if (mobileDrawer) {
+        document.body.classList.toggle("drawer-open", next);
+        if (next) {
+            sidebarLastFocus = document.activeElement;
+            const focusables = focusableIn(sb);
+            (focusables[0] || sb).focus();
+            document.addEventListener("keydown", onSidebarKeydown, true);
+        } else {
+            document.body.classList.remove("drawer-open");
+            document.removeEventListener("keydown", onSidebarKeydown, true);
+            if (sidebarLastFocus?.focus) sidebarLastFocus.focus();
+        }
+    }
 }
 $("#menuToggle").onclick = () => toggleSidebar();
 $("#sidebarBackdrop").onclick = () => toggleSidebar(false);
+$("#sidebar")?.addEventListener("click", e => { if (e.target.closest(".nav-item")) toggleSidebar(false) });
+window.addEventListener("resize", () => {
+    if (!window.matchMedia("(max-width: 860px)").matches) {
+        document.body.classList.remove("drawer-open");
+        document.removeEventListener("keydown", onSidebarKeydown, true);
+    }
+});
 
 // ───────── Routing ─────────
 function routeFromHash() { const h = location.hash || "#/painel"; return h.startsWith("#") ? h.slice(1) : h || "/painel" }
 function setActiveNav(route) { $$("#sidebar .nav-item").forEach(a => a.classList.toggle("active", a.dataset.route === route)) }
 function navigate(r) { location.hash = "#" + r }
-window.addEventListener("hashchange", () => { toggleSidebar(false); render() });
+window.addEventListener("hashchange", () => { toggleSidebar(false); $("#topbarMore")?.removeAttribute("open"); render() });
 
 // ───────── Helpers ─────────
 function groupBy(arr, fn) { const o = {}; for (const it of arr) { const k = fn(it); (o[k] = o[k] || []).push(it) } return o }

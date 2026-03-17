@@ -9,10 +9,10 @@ function pageTopologia() {
     const editMode = appState.topoEditMode;
     const snap = appState.topoSnapGrid;
     return `
-  <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;height:calc(100vh - var(--topbar-h) - 48px)">
+    <div class="card topo-page-card" style="margin-bottom:0;display:flex;flex-direction:column;height:calc(100dvh - var(--topbar-h) - 20px)">
     <div class="card-header" style="margin-bottom:8px">
       <div><h2 class="card-title">Topologia</h2><p class="card-desc">Visualize e organize os dispositivos e conexões da rede.</p></div>
-      <div class="card-actions">
+            <div class="card-actions topo-header-actions">
         <div class="btn-group">
           <button class="btn btn-sm ${editMode ? "active" : ""}" type="button" id="topoToggleEdit">${editMode ? "✏️ Editando" : "👁️ Visualizando"}</button>
           <button class="btn btn-sm ${snap ? "active" : ""}" type="button" id="topoToggleSnap" title="Snap ao grid">#</button>
@@ -369,7 +369,10 @@ function renderTopo(containerId) {
         $("#topoZoomOut")?.addEventListener("click", () => topoZoom(1.25));
     }
     // Auto zoom-to-fit on load
-    topoFitView();
+    requestAnimationFrame(() => {
+        topoFitView();
+        if (window.matchMedia('(max-width: 860px)').matches) setTimeout(() => topoFitView(), 120);
+    });
     // Clear highlight after 4s
     if (appState.topoHighlight) {
         setTimeout(() => { appState.topoHighlight = null; if (appState.route === "/topologia") renderTopo() }, 4000);
@@ -452,8 +455,22 @@ function initTopoPanZoom(cId) {
     const up = () => { topoState.dragging = false; if (svg) svg.style.cursor = appState.topoEditMode ? "crosshair" : "grab" };
     svg.addEventListener("mouseup", up); svg.addEventListener("mouseleave", up);
     // Touch
-    svg.addEventListener("touchstart", e => { const t = e.touches[0]; topoState.dragging = true; topoState.panStart = { mx: t.clientX, my: t.clientY, vx: topoState.vb.x, vy: topoState.vb.y } }, { passive: true });
-    svg.addEventListener("touchmove", e => { if (!topoState.dragging || topoState.dragNode) return; const t = e.touches[0]; const r = svg.getBoundingClientRect(); const sx = topoState.vb.w / r.width, sy = topoState.vb.h / r.height; topoState.vb.x = topoState.panStart.vx - (t.clientX - topoState.panStart.mx) * sx; topoState.vb.y = topoState.panStart.vy - (t.clientY - topoState.panStart.my) * sy; applyVB(svg) }, { passive: true });
+    svg.addEventListener("touchstart", e => {
+        if (!e.touches?.length) return;
+        const t = e.touches[0];
+        topoState.dragging = true;
+        topoState.panStart = { mx: t.clientX, my: t.clientY, vx: topoState.vb.x, vy: topoState.vb.y };
+    }, { passive: true });
+    svg.addEventListener("touchmove", e => {
+        if (!topoState.dragging || topoState.dragNode || !e.touches?.length) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        const r = svg.getBoundingClientRect();
+        const sx = topoState.vb.w / r.width, sy = topoState.vb.h / r.height;
+        topoState.vb.x = topoState.panStart.vx - (t.clientX - topoState.panStart.mx) * sx;
+        topoState.vb.y = topoState.panStart.vy - (t.clientY - topoState.panStart.my) * sy;
+        applyVB(svg);
+    }, { passive: false });
     svg.addEventListener("touchend", up);
 }
 function applyVB(svg) { if (!svg || !topoState.vb) return; const v = topoState.vb; svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`) }

@@ -113,7 +113,15 @@ p {
   border: none;
   color: #fff;
   cursor: pointer;
-  padding: 4px
+  padding: 4px;
+  border-radius: 6px
+}
+
+.topbar-menu-btn:focus-visible,
+.topbar-icon-btn:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px
 }
 
 .topbar-menu-btn svg {
@@ -728,9 +736,25 @@ p {
 
 /* ---------- Table ---------- */
 .table-wrap {
+  position: relative;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   margin: 0 -20px;
   padding: 0 20px
+}
+
+.table-wrap::after {
+  content: "";
+  position: sticky;
+  right: 0;
+  top: 0;
+  display: block;
+  width: 20px;
+  height: 100%;
+  margin-left: calc(100% - 20px);
+  background: linear-gradient(to left, rgba(246, 247, 249, .92), rgba(246, 247, 249, 0));
+  pointer-events: none
 }
 
 table {
@@ -801,6 +825,10 @@ tr:hover td {
 
 .td-actions .btn+.btn {
   margin-left: 4px
+}
+
+.td-actions .btn {
+  min-height: 32px
 }
 
 /* ---------- Toolbar ---------- */
@@ -929,7 +957,8 @@ tr:hover td {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   background: #fafbfc;
-  cursor: grab
+  cursor: grab;
+  touch-action: none
 }
 
 .topo-container:active {
@@ -1052,7 +1081,9 @@ tr:hover td {
   border-radius: 4px;
   background: #f1f5f9;
   position: relative;
-  user-select: none
+  user-select: none;
+  touch-action: none;
+  overscroll-behavior: contain
 }
 
 .rack-u {
@@ -1370,16 +1401,73 @@ tr:hover td {
 }
 
 /* ---------- Responsive ---------- */
-@media(max-width:900px) {
+body.drawer-open {
+  overflow: hidden;
+  touch-action: none
+}
+
+body.rack-dragging-body {
+  overflow: hidden;
+  touch-action: none
+}
+
+.topbar-more {
+  display: none;
+  position: relative
+}
+
+.topbar-more summary {
+  list-style: none;
+  cursor: pointer
+}
+
+.topbar-more summary::-webkit-details-marker {
+  display: none
+}
+
+.topbar-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-width: 140px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  z-index: 70
+}
+
+@media(max-width:1024px) {
+  .content {
+    padding: 16px;
+    width: 100%
+  }
+
+  .card {
+    margin-bottom: 12px
+  }
+}
+
+@media(max-width:860px) {
+  body {
+    overflow-x: hidden
+  }
+
   .sidebar {
     position: fixed;
     top: var(--topbar-h);
     left: 0;
     bottom: 0;
+    width: min(86vw, 320px);
     transform: translateX(-100%);
     transition: transform .2s ease;
     z-index: 45;
-    box-shadow: var(--shadow-md)
+    box-shadow: var(--shadow-md);
+    border-right: 1px solid var(--border-light)
   }
 
   .sidebar.open {
@@ -1391,7 +1479,11 @@ tr:hover td {
   }
 
   .topbar-menu-btn {
-    display: flex
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px
   }
 
   .inspector {
@@ -1404,7 +1496,35 @@ tr:hover td {
   }
 
   .content {
-    padding: 16px
+    padding: 10px;
+    width: 100%
+  }
+
+  .content-inner {
+    max-width: none
+  }
+
+  .card {
+    padding: 14px;
+    margin-bottom: 10px
+  }
+
+  .topbar {
+    gap: 6px;
+    padding: 0 8px;
+    flex-wrap: nowrap
+  }
+
+  #topbarUnitWrap {
+    flex: 1;
+    min-width: 0;
+    margin-left: 2px !important
+  }
+
+  #unitSelect {
+    min-width: 0 !important;
+    width: 100%;
+    max-width: 220px
   }
 
   .form-grid {
@@ -1419,31 +1539,95 @@ tr:hover td {
     width: 100%
   }
 
+  .rack-view,
+  .port-view {
+    max-height: calc(100dvh - var(--topbar-h) - 220px);
+    overflow: auto;
+    overscroll-behavior: contain
+  }
+
+  .dash-topo-canvas {
+    height: min(46dvh, 360px)
+  }
+
   .info-grid {
     grid-template-columns: 1fr 1fr
+  }
+
+  .topo-controls {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    justify-content: flex-end;
+    padding: 6px;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .92)
+  }
+
+  .topo-controls .btn {
+    min-height: 36px
+  }
+
+  .table-wrap {
+    margin: 0 -10px;
+    padding: 0 10px
   }
 }
 
 @media(max-width:600px) {
   .topbar {
-    padding: 0 12px;
-    gap: 8px
+    padding: 0 6px;
+    gap: 4px
   }
 
   .topbar-title {
-    font-size: 14px
+    font-size: 13px
+  }
+
+  #btnUnitsPage,
+  #btnUndo {
+    display: none
+  }
+
+  .topbar-more {
+    display: block
+  }
+
+  .topbar-status {
+    width: 7px;
+    height: 7px
   }
 
   .content {
-    padding: 12px
+    padding: 8px
   }
 
   .card {
-    padding: 14px
+    padding: 12px
+  }
+
+  .card-header {
+    margin-bottom: 10px
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr)
+  }
+
+  .stat-card {
+    padding: 10px
+  }
+
+  .toolbar {
+    gap: 6px;
+    margin-bottom: 8px
+  }
+
+  .search-box,
+  .filter-select {
+    max-width: none;
+    width: 100%
   }
 
   .info-grid {
@@ -1452,6 +1636,60 @@ tr:hover td {
 
   .tabs {
     overflow-x: auto
+  }
+
+  .port-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
+  .btn,
+  .form-input,
+  .form-select,
+  .tab,
+  .nav-item {
+    min-height: 40px
+  }
+
+  .port-card {
+    min-height: 84px
+  }
+
+  .topo-page-card {
+    height: calc(100dvh - var(--topbar-h) - 12px) !important
+  }
+
+  .topo-header-actions {
+    width: 100%;
+    justify-content: flex-start
+  }
+
+  .td-actions .btn {
+    min-height: 36px;
+    padding: 6px 9px
+  }
+}
+
+@media(max-width:420px) {
+  .topbar-title {
+    display: none
+  }
+
+  #unitSelect {
+    max-width: 160px;
+    font-size: 11px !important
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr
+  }
+
+  .port-grid {
+    grid-template-columns: 1fr
+  }
+
+  .table-wrap {
+    margin: 0 -8px;
+    padding: 0 8px
   }
 }
 
